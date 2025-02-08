@@ -2,6 +2,7 @@
 
 #include "Perceptron.h"
 #include "PerceptronSeq.h"
+#include "LayeredPerceptron.h"
 #include <Eigen/Dense>
 #include <iostream>
 #include <vector>
@@ -22,7 +23,7 @@ namespace ML::DataSet
 
   void trainPimaSeq();
 
-  void trainXOrSeq();
+  void trainXOrMLP();
 
   MatrixXd readDataFile(std::string fileName, const std::vector<int> &takeCols);
 

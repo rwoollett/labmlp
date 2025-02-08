@@ -267,7 +267,7 @@ namespace ML::DataSet
     MatrixXd trainInputs = dataSet(seqN(1, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
     MatrixXd testInputs = dataSet(seqN(0, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
 
-    Perceptron pcn(trainInputs, trainTargets);
+    Seq::Perceptron pcn(trainInputs, trainTargets);
     pcn.pcntrain(trainInputs, trainTargets, learningRateETA, noIterations);
     pcn.confmat(testInputs, testTargets);
   }
@@ -343,7 +343,7 @@ namespace ML::DataSet
     pcn.confmat(trainInputs, trainTargets);
   }
 
-  void trainXOrSeq()
+  void trainXOrMLP()
   {
     double learningRateETA = 0.25;
 
@@ -355,7 +355,7 @@ namespace ML::DataSet
     MatrixXd trainTargets(4, 1);
     trainTargets << 0.0, 1.0, 1.0, 0.0;
 
-    Seq::Perceptron pcn(trainInputs, trainTargets);
+    LayeredPerceptron pcn(trainInputs, trainTargets);
     pcn.pcntrain(trainInputs, trainTargets, learningRateETA, 10);
 
     pcn.confmat(trainInputs, trainTargets);

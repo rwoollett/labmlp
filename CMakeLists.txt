@@ -44,6 +44,8 @@ add_executable(mlp
         src/Perceptron.h
         src/PerceptronSeq.cpp
         src/PerceptronSeq.h
+        src/LayeredPerceptron.cpp
+        src/LayeredPerceptron.h
         src/io_utility/io_utility.cpp
         src/io_utility/io_utility.h
 )
