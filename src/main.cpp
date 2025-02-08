@@ -1,5 +1,5 @@
 //============================================================================
-// Graph Traversing
+// Machine Learning
 //============================================================================
 #include <iostream>
 #include "TrainingData.h"
@@ -11,7 +11,7 @@ using namespace ML::DataSet;
 int main(int argc, char *argv[])
 {
 
-  //  Comment out traing data functions as require.
+  //  Comment out training data functions as require.
   //trainPimaSeq();
   trainXOr();
   testTrainNClasses();

@@ -50,10 +50,10 @@ for i in range(nread):
 #     net.earlystopping(train_in,train_tgt,valid_in,valid_tgt,0.1)
 #     net.confmat(test_in,test_tgt)
 
-net = mlp.mlp(train_in,train_tgt,7,outtype='softmax')
+net = mlp.mlp(train_in,train_tgt,2,outtype='linear')
 
-net.mlptrain(train_in,train_tgt,0.1,500)
-net.confmat(test_in,test_tgt)
+# net.mlptrain(train_in,train_tgt,0.1,1500)
+# net.confmat(test_in,test_tgt)
 
 net.earlystopping(train_in,train_tgt,valid_in,valid_tgt,0.1)
 net.confmat(test_in,test_tgt)
