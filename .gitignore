@@ -1,0 +1,49 @@
+penv
+build-release
+build
+__pycache__
+.vscode
+mnist.pkl.gz
+lab4.pdf
+
+dataset/mnist.pkl
+dataset/mnist.pkl.gz
+
+# Dependencies
+/.deps
+/.dirstamp
+
+# Cove coverage
+/coverage.info
+/coveragereport
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
