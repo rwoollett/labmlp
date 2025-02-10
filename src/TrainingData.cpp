@@ -346,6 +346,9 @@ namespace ML::DataSet
   void trainXOrMLP()
   {
     double learningRateETA = 0.25;
+    int nHidden = 10;
+    double beta = 1.0;
+    int nIterations = 401;
 
     MatrixXd trainInputs(4, 3);
     trainInputs << 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0;
@@ -355,10 +358,10 @@ namespace ML::DataSet
     MatrixXd trainTargets(4, 1);
     trainTargets << 0.0, 1.0, 1.0, 0.0;
 
-    LayeredPerceptron pcn(trainInputs, trainTargets);
-    pcn.pcntrain(trainInputs, trainTargets, learningRateETA, 10);
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden, beta);
+    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
 
-    pcn.confmat(trainInputs, trainTargets);
+    mlp.confmat(trainInputs, trainTargets);
   }
 
   MatrixXd readDataFile(std::string fileName, const std::vector<int> &takeCols)

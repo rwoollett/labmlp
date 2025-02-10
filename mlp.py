@@ -77,6 +77,7 @@ class mlp:
             else:
                 print("error")
             
+            tmp = np.dot(deltao,np.transpose(self.weights2))
             deltah = self.hidden*self.beta*(1.0-self.hidden)*(np.dot(deltao,np.transpose(self.weights2)))
                       
             updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
@@ -95,10 +96,13 @@ class mlp:
         self.hidden = np.dot(inputs,self.weights1)
         self.hidden = 1.0/(1.0+np.exp(-self.beta*self.hidden))
         self.hidden = np.concatenate((self.hidden,-np.ones((np.shape(inputs)[0],1))),axis=1)
+        #    inputs = np.concatenate((inputs,     -np.ones((self.ndata,1))),axis=1)
+
 
         outputs = np.dot(self.hidden,self.weights2)
 
         # Different types of output neurons
+        res2 = 1.0/(1.0+np.exp(-self.beta*outputs))
         if self.outtype == 'linear':
             return outputs
         elif self.outtype == 'logistic':

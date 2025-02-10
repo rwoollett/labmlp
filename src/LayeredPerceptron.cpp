@@ -12,8 +12,8 @@ constexpr double HasStd = 1.0;
 
 namespace ML
 {
-  LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets)
-      : m_nIn{1}, m_nOut{1}, m_nData{0}
+  LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets, int nhidden, double beta)
+      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{beta}
   {
 
     // Set up network size
@@ -32,18 +32,29 @@ namespace ML
     m_nData = inputs.innerSize();
 
     std::cout << "network size " << std::endl
-              << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
+              << " nIn: " << m_nIn << ", nHidden:" << m_nHidden << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
 
     // # Initialise network
-    MatrixXd mat2 = MatrixXd::Random(m_nIn + 1, m_nOut) * (0.1 - 0.05);
-    // ArrayXd a2 = ArrayXd::Random((m_nIn + 1) * m_nOut) * (0.1 - 0.05);
-    m_weights = MatrixXd(m_nIn + 1, m_nOut);
-    m_weights << mat2;
+    MatrixXd fillScaler = MatrixXd(m_nIn + 1, m_nHidden);
+    fillScaler.fill(0.5);
+    MatrixXd mat1 = MatrixXd::Random(m_nIn + 1, m_nHidden) - fillScaler;
+    mat1 = (mat1 * 2 / std::sqrt(m_nIn)).eval();
+    m_weights1 = MatrixXd(m_nIn + 1, m_nHidden);
+    m_weights1 << mat1;
 
-    std::cout << "random weights in network initialized: " << mat2.transpose() << std::endl;
+    fillScaler = MatrixXd(m_nHidden + 1, m_nOut);
+    MatrixXd mat2 = MatrixXd::Random(m_nHidden + 1, m_nOut) - fillScaler;
+    mat2 = (mat2 * 2 / std::sqrt(m_nHidden)).eval();
+    m_weights2 = MatrixXd(m_nHidden + 1, m_nOut);
+    m_weights2 << mat2;
+
+    std::cout << "random weights1 in network initialized: " << std::endl
+              << mat1.transpose() << std::endl;
+    std::cout << "random weights2 in network initialized: " << std::endl
+              << mat2.transpose() << std::endl;
   }
 
-  void LayeredPerceptron::pcntrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations)
+  void LayeredPerceptron::mlptrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations)
   {
     MatrixXd biasInput(m_nData, 1);
     biasInput.fill(-1.0);
@@ -60,54 +71,109 @@ namespace ML
 
     for (int i = 0; i < nIterations; i++)
     {
-      pcnfwd(inputsWithBiasEntry, targets, eta);
-      D(std::cout << "train weights at iter: " << i << " " << std::endl
-                  << m_weights << std::endl;)
+      // we bedoing fwd and bck in mlpfwd
+      mlpfwd(inputsWithBiasEntry, targets, eta, i);
+
     }
   }
 
-  void LayeredPerceptron::pcnfwd(const MatrixXd &inputs, const MatrixXd &targets, double eta)
+  void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, double eta, int iteration)
   {
-    MatrixXd nResults(m_nData, m_nOut);
+    MatrixXd biasInput(m_nData, 1);
+    biasInput.fill(-1.0);
+    MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
+    nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden).fill(0);
+    nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
+
+    MatrixXd nOutputActivation(m_nData, m_nOut);
+    nOutputActivation.fill(0);
+
+    std::cout << "nHiddenActivations init " << std::endl;
+    std::cout << nHiddenActivationWithBias << std::endl;
+    std::cout << "nOutputActivation init " << std::endl;
+    std::cout << nOutputActivation << std::endl;
     for (int nData = 0; nData < m_nData; nData++)
     {
-      for (int n = 0; n < m_nOut; n++)
+      for (int n = 0; n < m_nHidden; n++)
       {
 
-        nResults(nData, n) = 0;
+        nHiddenActivationWithBias(nData, n) = 0;
 
         for (int m = 0; m < m_nIn + 1; m++)
         {
-          D(std::cout << "m=" << m << ", w=" << m_weights(m, n) << " x=" << inputs(nData, m) << std::endl;)
-          auto connect = (m_weights(m, n) * inputs(nData, m));
-          nResults(nData, n) += connect;
-          D(std::cout << "w*x=" << connect << std::endl;)
-        }
-        D(std::cout << "at n, sum y= " << nResults(nData, n) << " " << std::endl;)
-
-        if (nResults(nData, n) > m_threshold)
-        {
-          nResults(nData, n) = 1;
-        }
-        else
-        {
-          nResults(nData, n) = 0;
-        }
-        D(std::cout << "nData n at: " << nData << " " << n << " " << std::endl
-                  << "nResult activation result: " << nResults(nData, n) << " " << std::endl
-                  << std::endl;)
-        // sequential updates weight
-        for (int m = 0; m < m_nIn + 1; m++)
-        {
-          D(std::cout << "y=" << nResults(nData, n) << ", t=" << targets(nData, n) << ", x=" << inputs(nData, m) << std::endl;)
-          m_weights(m, n) -= (eta * (nResults(nData, n) - targets(nData, n)) * inputs(nData, m));
-          D(std::cout << "weight=" << m_weights(m, n) << std::endl;)
+          // D(std::cout << "m=" << m << ", w=" << m_weights1(m, n) << " x=" << inputs(nData, m) << std::endl;)
+          auto connect = (inputs(nData, m) * m_weights1(m, n));
+          nHiddenActivationWithBias(nData, n) += connect;
+          // D(std::cout << "w*x=" << connect << std::endl;)
         }
 
-        D(std::cout << "Threshold activations at nData n" << nData << " " << n << "\n"
-                    << nResults << std::endl;)
+        D(std::cout << "at n, sum Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
+        nHiddenActivationWithBias(nData, n) = 1.0 / (1.0 + std::exp(-1 * m_beta*nHiddenActivationWithBias(nData, n)));
+        D(std::cout << "at n, activation Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
+        D(std::cout << "nData n at: " << nData << " " << n << " " << std::endl;)
       }
+
+      // Now do output layer after hidden layer ; use logistic activation
+
+      for (int o = 0; o < m_nOut; o++)
+      {
+        nOutputActivation(nData, o) = 0;
+
+        for (int m = 0; m < m_nHidden + 1; m++)
+        {
+          // D(std::cout << "m=" << m << ", w=" << m_weights2(m, o) << " x=" << inputs(nData, m) << std::endl;)
+          auto connect = (nHiddenActivationWithBias(nData, m) * m_weights2(m, o));
+          nOutputActivation(nData, o) += connect;
+          // D(std::cout << "w*x=" << connect << std::endl;)
+        }
+        std::cout << "at n, sum K= " << nOutputActivation(nData, o) << " " << std::endl;
+        // calculate nData activation
+        // self.hidden = 1.0/(1.0+np.exp(-self.beta*self.hidden))
+        //double nOutputA = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+        nOutputActivation(nData, o) *= 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+
+        D(std::cout << "at n, activation K= " << nOutputActivation(nData, o) << " " << std::endl;)
+        D(std::cout << "nData o at: " << nData << " " << o << " " << std::endl;)
+      }
+
+      /////
+      std::cout << "nOutputActivation " << std::endl
+                << nOutputActivation.row(nData) << std::endl;
+      std::cout << "nHiddenActivation " << std::endl
+                << nHiddenActivationWithBias.row(nData) << std::endl;
+
+      std::cout << "train weights 1: " << std::endl
+                << m_weights1 << std::endl;
+      std::cout << "train weights 2: " << std::endl
+                << m_weights2 << std::endl;
+
+      std::cout << "=========" << std::endl;
+      D(std::cout << "train targets " << std::endl
+                  << targets << std::endl;)
+      std::cout << "=========" << std::endl;
+
+      // sequential updates weight
+      
+      // for (int m = 0; m < m_nIn + 1; m++)
+      // {
+      //   D(std::cout << "y=" << nHiddenActivation(nData, n) << ", t=" << targets(nData, n) << ", x=" << inputs(nData, m) << std::endl;)
+      //   m_weights1(m, n) -= (eta * (nHiddenActivation(nData, n) - targets(nData, n)) * inputs(nData, m));
+      //   D(std::cout << "weight=" << m_weights1(m, n) << std::endl;)
+      // }
+
+      // D(std::cout << "Threshold activations at nData n" << nData << " " << n << "\n"
+      //             << nHiddenActivation << std::endl;)
     }
+
+    MatrixXd findError(m_nData, m_nOut);
+    findError << (nOutputActivation - targets).eval();
+    findError = findError.array().pow(2);
+    double error = 0.5 * findError.array().sum();
+   
+    if (iteration % 100 == 0) {
+      std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
+    }
+
   }
 
   void LayeredPerceptron::confmat(const MatrixXd &inputs, MatrixXd targets)
@@ -115,23 +181,26 @@ namespace ML
     MatrixXd biasInput(m_nData, 1);
     biasInput.fill(-1.0);
     MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
-    inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
-    inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
-
+    MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
+    MatrixXd outputs(m_nData, m_nOut);
     Eigen::ArrayXXd a(m_nData, m_nOut);
-    a.fill(1.0);
     Eigen::ArrayXXd b(m_nData, m_nOut);
+
+    a.fill(1.0);
     b.fill(0);
 
-    MatrixXd outputs(m_nData, m_nOut);
-    auto res = inputsWithBiasEntry * m_weights;
+    inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
+    inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
+    nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden) << inputsWithBiasEntry * m_weights1;
+    nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
+    auto res = nHiddenActivationWithBias * m_weights2;
     outputs << res;
 
     int nClasses = targets.outerSize();
     if (nClasses == 1)
     {
       nClasses = 2;
-      outputs = (outputs.array() > 0).select(a, b);
+      outputs = (outputs.array() > 0.5).select(a, b);
     }
     else
     {
