@@ -34,6 +34,8 @@ namespace ML
 
     void mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, double eta, int iteration);
 
+    void mlpbkwdpropogate(const MatrixXd &inputs, const MatrixXd &targets, double eta, int iteration);
+
     void confmat(const MatrixXd &inputs, MatrixXd targets);
 
     ArrayXd indiceMax(const MatrixXd &matrix, int nData, int recordLength);

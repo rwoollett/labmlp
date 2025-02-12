@@ -73,7 +73,6 @@ namespace ML
     {
       // we bedoing fwd and bck in mlpfwd
       mlpfwd(inputsWithBiasEntry, targets, eta, i);
-
     }
   }
 
@@ -108,7 +107,7 @@ namespace ML
         }
 
         D(std::cout << "at n, sum Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
-        nHiddenActivationWithBias(nData, n) = 1.0 / (1.0 + std::exp(-1 * m_beta*nHiddenActivationWithBias(nData, n)));
+        nHiddenActivationWithBias(nData, n) = 1.0 / (1.0 + std::exp(-1 * m_beta * nHiddenActivationWithBias(nData, n)));
         D(std::cout << "at n, activation Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
         D(std::cout << "nData n at: " << nData << " " << n << " " << std::endl;)
       }
@@ -129,7 +128,7 @@ namespace ML
         std::cout << "at n, sum K= " << nOutputActivation(nData, o) << " " << std::endl;
         // calculate nData activation
         // self.hidden = 1.0/(1.0+np.exp(-self.beta*self.hidden))
-        //double nOutputA = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+        // double nOutputA = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
         nOutputActivation(nData, o) *= 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
 
         D(std::cout << "at n, activation K= " << nOutputActivation(nData, o) << " " << std::endl;)
@@ -153,7 +152,63 @@ namespace ML
       std::cout << "=========" << std::endl;
 
       // sequential updates weight
-      
+      // deltao = self.beta*(self.outputs-targets)*self.outputs*(1.0-self.outputs)
+      MatrixXd vOutputs(1, 4);
+      MatrixXd vOutputAsOnes(1, 4);
+      vOutputAsOnes.fill(1.0);
+      MatrixXd deltaO(1, 4);
+      // MatrixXd vOutputs1plus(1, m_nOut);
+      vOutputs << 0.22, 0.12, 0.12, 0.23; // nOutputActivation.row(nData);
+
+      MatrixXd trainTargets(1, 4);
+      trainTargets << 0.0, 1.0, 0.0, 0.0;
+      std::cout << "targets" << std::endl;
+      std::cout << trainTargets.row(0) << std::endl;
+      // std::cout << "targets:" << std::endl;
+      // std::cout << targets << std::endl;
+
+      std::cout << "vOutputs:" << std::endl;
+      std::cout << vOutputs << std::endl;
+
+      std::cout << "vOutputs trainTargets.row(0):" << std::endl;
+      std::cout << vOutputs - trainTargets.row(0) << std::endl;
+
+      std::cout << "1 - vOutputs" << std::endl;
+      std::cout << vOutputAsOnes - vOutputs << std::endl;
+
+      std::cout << "vOutputs.transpose()" << std::endl;
+      std::cout << vOutputs.transpose() << std::endl;
+
+      std::cout << "1 x 4 * 4 x 1" << std::endl;
+      std::cout << (vOutputs - trainTargets.row(0)) * vOutputs.transpose() << std::endl;
+
+   //   deltao = self.beta* (self.outputs-targets) * self.outputs-targets* (1.0-self.outputs)
+
+      deltaO << (m_beta * (vOutputs - trainTargets.row(0)).array() * vOutputs.array() * (vOutputAsOnes - vOutputs).array()).eval();
+      std::cout << "1 - vOutputs" << std::endl;
+      std::cout << (vOutputAsOnes - vOutputs) << std::endl;
+      std::cout << "delta with required element wise mulitplication of encoded row" << std::endl;
+      std::cout << deltaO << std::endl;
+
+      for (int o = 0; o < 4; o++)
+      {
+        deltaO(0,o) = m_beta * (vOutputs(0, o) - trainTargets(0, o)) * vOutputs(0, o) * (1.0 - vOutputs(0, o));
+      }
+      std::cout << "delta one by one for encoded arrau" << std::endl;
+      std::cout << deltaO << std::endl;
+
+      std::cout << "=========" << std::endl;
+
+      // double deltao = m_beta * vOutputs
+      // nOutputActivation(nData, o) *= 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+
+      // deltah = self.hidden*self.beta*(1.0-self.hidden)*(np.dot(deltao,np.transpose(self.weights2)))
+
+      //  updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
+      //  updatew2 = eta*(np.dot(np.transpose(self.hidden),deltao)) + self.momentum*updatew2
+      //  self.weights1 -= updatew1
+      //  self.weights2 -= updatew2
+
       // for (int m = 0; m < m_nIn + 1; m++)
       // {
       //   D(std::cout << "y=" << nHiddenActivation(nData, n) << ", t=" << targets(nData, n) << ", x=" << inputs(nData, m) << std::endl;)
@@ -169,11 +224,11 @@ namespace ML
     findError << (nOutputActivation - targets).eval();
     findError = findError.array().pow(2);
     double error = 0.5 * findError.array().sum();
-   
-    if (iteration % 100 == 0) {
+
+    if (iteration % 100 == 0)
+    {
       std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
     }
-
   }
 
   void LayeredPerceptron::confmat(const MatrixXd &inputs, MatrixXd targets)

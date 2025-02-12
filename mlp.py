@@ -67,6 +67,7 @@ class mlp:
             if (np.mod(n,100)==0):
                 print ("Iteration: ",n, " Error: ",error)
 
+            val2 = 1.0-self.outputs
             # Different types of output neurons
             if self.outtype == 'linear':
                 deltao = (self.outputs-targets)/self.ndata
@@ -80,6 +81,7 @@ class mlp:
             tmp = np.dot(deltao,np.transpose(self.weights2))
             deltah = self.hidden*self.beta*(1.0-self.hidden)*(np.dot(deltao,np.transpose(self.weights2)))
                       
+            tmp2 = deltah[:,:-1]
             updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
             updatew2 = eta*(np.dot(np.transpose(self.hidden),deltao)) + self.momentum*updatew2
             self.weights1 -= updatew1
