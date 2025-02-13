@@ -303,10 +303,24 @@ namespace ML::DataSet
     std::cout << "Train targets" << std::endl;
     std::cout << trainTargets << std::endl;
 
-    Seq::Perceptron pcn(trainInputs, trainTargets);
-    pcn.pcntrain(trainInputs, trainTargets, learningRateETA, 6);
+    // Seq::Perceptron pcn(trainInputs, trainTargets);
+    // pcn.pcntrain(trainInputs, trainTargets, learningRateETA, 6);
 
-    pcn.confmat(trainInputs, trainTargets);
+    // pcn.confmat(trainInputs, trainTargets);
+    // Seq::Perceptron pcn(trainInputs, trainTargets);
+    // pcn.pcntrain(trainInputs, trainTargets, learningRateETA, 6);
+
+    // pcn.confmat(trainInputs, trainTargets);
+
+    int nHidden = 10;
+    double beta = 1.0;
+    int nIterations = 8001;
+
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden, beta);
+    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+
+    mlp.confmat(trainInputs, trainTargets);
+
   }
 
   void trainOr()
@@ -345,13 +359,13 @@ namespace ML::DataSet
 
   void trainXOrMLP()
   {
-    double learningRateETA = 0.25;
-    int nHidden = 10;
+    double learningRateETA = 0.15;
+    int nHidden = 2;
     double beta = 1.0;
-    int nIterations = 401;
+    int nIterations = 5000;
 
-    MatrixXd trainInputs(4, 3);
-    trainInputs << 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0;
+    MatrixXd trainInputs(4, 2);
+    trainInputs << 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0;
     // MatrixXd trainInputs(4, 2);
     // trainInputs << 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0;
 

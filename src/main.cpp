@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
   //trainPimaSeq();
   //trainXOr();
   //testTrainNClasses();
+
   trainXOrMLP();
 
   return EXIT_SUCCESS;

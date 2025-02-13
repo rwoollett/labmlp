@@ -29,6 +29,11 @@ class mlp:
         self.weights1 = (np.random.rand(self.nin+1,self.nhidden)-0.5)*2/np.sqrt(self.nin)
         self.weights2 = (np.random.rand(self.nhidden+1,self.nout)-0.5)*2/np.sqrt(self.nhidden)
 
+        print("2/np.sqrt(self.nin):", 2/np.sqrt(self.nin), " in: ", self.nin, " hidden:", self.nhidden, " nout", self.nout, " nData:", self.ndata)
+        print(self.weights1)
+        print(self.weights2)
+        print("---")
+
     def earlystopping(self,inputs,targets,valid,validtargets,eta,niterations=100):
     
         valid = np.concatenate((valid,-np.ones((np.shape(valid)[0],1))),axis=1)
@@ -103,6 +108,7 @@ class mlp:
 
         outputs = np.dot(self.hidden,self.weights2)
 
+
         # Different types of output neurons
         res2 = 1.0/(1.0+np.exp(-self.beta*outputs))
         if self.outtype == 'linear':
@@ -122,6 +128,7 @@ class mlp:
         inputs = np.concatenate((inputs,-np.ones((np.shape(inputs)[0],1))),axis=1)
         outputs = self.mlpfwd(inputs)
         
+        print (outputs)
         nclasses = np.shape(targets)[1]
 
         if nclasses==1:
