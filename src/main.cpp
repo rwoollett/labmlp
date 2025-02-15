@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
   //  Comment out training data functions as require.
   // trainPimaSeq();
   // trainXOr();
-  // testTrainNClasses();
+  testTrainNClasses();
 
   trainXOrMLP();
 

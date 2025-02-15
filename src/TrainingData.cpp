@@ -313,7 +313,7 @@ namespace ML::DataSet
     // pcn.confmat(trainInputs, trainTargets);
 
     int nHidden = 10;
-    int nIterations = 8001;
+    int nIterations = 101;
 
     LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
     mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
