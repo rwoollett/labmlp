@@ -66,10 +66,6 @@ namespace ML
               << m_weights1 << std::endl;
     std::cout << "random weights2 in network initialized: " << std::endl
               << m_weights2 << std::endl;
-    std::cout << "random weights1 in network initialized: " << std::endl
-              << m_updatew1 << std::endl;
-    std::cout << "random weights2 in network initialized: " << std::endl
-              << m_updatew2 << std::endl;
     std::cout << "====" << std::endl;
   }
 
@@ -97,13 +93,6 @@ namespace ML
 
     for (int i = 0; i < nIterations; i++)
     {
-// we bedoing fwd and bck in mlpfwd
-#ifndef NDEBUG
-      std::cout << "train inputs with bias: " << std::endl
-                << inputsWithBiasEntry << std::endl;
-      std::cout << "train targets " << std::endl
-                << trainTargets << std::endl;
-#endif
       mlpfwd(inputsWithBiasEntry, trainTargets, eta, i);
 
       // Shuffle inputs and target to same place
@@ -307,7 +296,6 @@ namespace ML
     {
       ArrayXd Nrecord = matrix.reshaped();
       auto result = std::max_element(Nrecord.begin(), Nrecord.end());
-      // TODO: From result to end if find same value mark as -1
       auto duplicateresult = std::max_element(result + 1, Nrecord.end());
       if (duplicateresult != Nrecord.end() && *result == *duplicateresult)
       {
@@ -325,7 +313,6 @@ namespace ML
         MatrixXd mat = matrix(seqN(i, 1), seqN(0, recordLength));
         ArrayXd Nrecord = mat.reshaped();
         auto result = std::max_element(Nrecord.begin(), Nrecord.end());
-        // TODO: From result to end if find same value mark as -1
         auto duplicateresult = std::max_element(result + 1, Nrecord.end());
         if (duplicateresult != Nrecord.end() && *result == *duplicateresult)
         {
@@ -340,24 +327,3 @@ namespace ML
     return indices;
   }
 }
-
-// This function does the recall computation
-// Eigen::ArrayXXd result = (activations.array() >= 26).select(a, b);
-// Matrix<double, 2, 2> result2 = (Nresults.array() >= 26).select(a, b);
-/**
- * the folloing is using eigen matrix dot function, which can only work with vectors
- *
-for (int i = 0; i < trainInputs.innerSize(); i++)
-{
-  std::cout << "[" << trainInputs.row(i) << "] " << std::endl;
-  for (int j = 0; j < trainWeights.outerSize(); j++)
-  {
-    std::cout << "[" << trainWeights.col(j) << "] - ";
-    std::cout << std::setw(5) << trainInputs.row(i).dot(trainWeights.col(j)) << " " << std::endl;
-    activations(i, j) = trainInputs.row(i).dot(trainWeights.col(j));
-  }
-  std::cout << std::endl;
-}
-std::cout << "Complete activation: " << activations << std::endl;
-
-*/
