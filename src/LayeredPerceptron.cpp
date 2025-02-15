@@ -13,7 +13,7 @@ constexpr double HasStd = 1.0;
 namespace ML
 {
   LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets, int nhidden)
-      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{1.0}, m_momentum{0.8}
+      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{1.0}, m_momentum{0.9}
   {
 
     std::seed_seq seed_seq{static_cast<long unsigned int>(time(0))};
@@ -96,6 +96,11 @@ namespace ML
     D(std::cout << "train targets " << std::endl
                 << trainTargets << std::endl;)
 
+    m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
+    m_updatew1.setZero();
+    m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
+    m_updatew2.setZero();
+
     for (int i = 0; i < nIterations; i++)
     {
 // we bedoing fwd and bck in mlpfwd
@@ -141,15 +146,11 @@ namespace ML
     MatrixXd nOutputActivation(m_nData, m_nOut);
     nOutputActivation.fill(0);
 
-    // updatew1 = np.zeros((np.shape(self.weights1)))
-    // updatew2 = np.zeros((np.shape(self.weights2)))
-    // MatrixXd dataUpdateW1 = MatrixXd(m_nIn + 1, m_nHidden);
-    m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
-    m_updatew1.setZero();
-    m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
-    m_updatew2.setZero();
+    // m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
+    // m_updatew1.setZero();
+    // m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
+    // m_updatew2.setZero();
 
-    // for (int nData = 0; nData < m_nData; nData++)
     for (int nData = 0; nData < m_nData; nData++)
     {
       for (int n = 0; n < m_nHidden; n++)
@@ -174,11 +175,15 @@ namespace ML
           auto connect = (nHiddenActivationWithBias(nData, m) * m_weights2(m, o));
           nOutputActivation(nData, o) += connect;
         }
-
-        double resO = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+        //std::cout << "nOutputActivation before act" << std::endl;
+        //std::cout << nOutputActivation << std::endl;
+  
+        double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * nOutputActivation(nData, o)));
         nOutputActivation(nData, o) = resO;
       }
 
+      //std::cout << "nOutputActivation after fwd" << std::endl;
+      //std::cout << nOutputActivation << std::endl;
       // sequential updates weight
       // deltao = self.beta*(self.outputs-targets)*self.outputs*(1.0-self.outputs)
       MatrixXd deltaO(1, m_nOut);
@@ -244,7 +249,7 @@ namespace ML
       std::cout << eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden))) << std::endl;
 #endif
 
-      MatrixXd nDataUpdateW1 = MatrixXd(m_nIn + 1, m_nHidden);
+      //MatrixXd nDataUpdateW1 = MatrixXd(m_nIn + 1, m_nHidden);
       // updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
       m_updatew1 = (eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden))) + m_momentum * m_updatew1).eval();
 
@@ -262,10 +267,15 @@ namespace ML
       std::cout << "nHiddenActivationWithBias * deltaO" << std::endl;
       std::cout << nHiddenActivationWithBias.row(nData).transpose() * deltaO << std::endl;
       std::cout << "=========" << std::endl;
+      std::cout << "m_updatew2" << std::endl;
+      std::cout << m_updatew2 << std::endl;
+      std::cout << "eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO)" << std::endl;
+      std::cout << eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO) << std::endl;
+      std::cout << "m_momentum * m_updatew2" << std::endl;
+      std::cout << m_momentum * m_updatew2 << std::endl;
+      std::cout << "=========" << std::endl;
 #endif
 
-      MatrixXd nDataUpdateW2 = MatrixXd(m_nHidden + 1, m_nOut);
-      // updatew2 = eta*(np.dot(np.transpose(self.hidden),deltao)) + self.momentum*updatew2
       m_updatew2 = (eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO) + m_momentum * m_updatew2).eval();
 
 #ifndef NDEBUG
@@ -288,6 +298,8 @@ namespace ML
       std::cout << "m_weights2 - nDataUpdateW2" << std::endl;
       std::cout << m_weights2 - nDataUpdateW2 << std::endl;
       std::cout << "=========" << std::endl;
+      std::cout << "m_weights2 before update" << std::endl;
+      std::cout << m_weights2 << std::endl;
 #endif
 
       m_weights1 = (m_weights1 - m_updatew1).eval();
@@ -310,7 +322,6 @@ namespace ML
     if (iteration % 100 == 0)
     {
       std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
-      std::cout << "Outputs: " << nOutputActivation << std::endl;
     }
   }
 
@@ -331,10 +342,30 @@ namespace ML
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
     nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden) << inputsWithBiasEntry * m_weights1;
     nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
-    auto res = nHiddenActivationWithBias * m_weights2;
-    outputs << res;
 
-    std::cout << "outputs" << std::endl;
+    // the following equationa are the fwd process of the mlp train
+    // TODO: make the fwd process just do the fwd step and a new bckpropagate function in the train
+    for (int nData = 0; nData < m_nData; nData++)
+    {
+      for (int n = 0; n < m_nHidden; n++)
+      {
+        double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
+        nHiddenActivationWithBias(nData, n) = resH; //(1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
+      }
+    }
+
+    outputs = nHiddenActivationWithBias * m_weights2;
+
+    for (int nData = 0; nData < m_nData; nData++)
+    {
+      for (int o = 0; o < m_nOut; o++)
+      {
+        double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * outputs(nData, o)));
+        outputs(nData, o) = resO;
+      }
+    }
+    // end of fwd process - outputs are the activated results
+    std::cout << "Outputs" << std::endl;
     std::cout << outputs << std::endl;
 
     int nClasses = targets.outerSize();

@@ -360,7 +360,7 @@ namespace ML::DataSet
   {
     double learningRateETA = 0.25;
     int nHidden = 2;
-    int nIterations = 3000;
+    int nIterations = 1001;
 
     MatrixXd trainInputs(4, 2);
     trainInputs << 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0;
