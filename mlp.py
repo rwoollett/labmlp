@@ -67,9 +67,13 @@ class mlp:
         for n in range(niterations):
     
             self.outputs = self.mlpfwd(inputs)
+            print (self.outputs[:,0:2])
+            print ("\nOutput all\n",self.outputs[:,0:2])
+            print ("+++++")
 
             error = 0.5*np.sum((self.outputs-targets)**2)
             if (np.mod(n,100)==0):
+                print(self.outputs-targets)
                 print ("Iteration: ",n, " Error: ",error)
 
             val2 = 1.0-self.outputs
@@ -82,12 +86,18 @@ class mlp:
                 deltao = (self.outputs-targets)*(self.outputs*(-self.outputs)+self.outputs)/self.ndata 
             else:
                 print("error")
+            print ("\nIterations:", n,  "\nDeltaO", deltao, "\nOutputs",self.outputs)
             
             tmp = np.dot(deltao,np.transpose(self.weights2))
             deltah = self.hidden*self.beta*(1.0-self.hidden)*(np.dot(deltao,np.transpose(self.weights2)))
                       
-            tmp2 = deltah[:,:-1]
+            print ("np.transpose(inputs)\n",np.transpose(inputs))
+            print ("deltah[:,:-1]\n",deltah[:,:-1])
+            print ("deltah\n",deltah)
+            print ("self.momentum*updatew1]n",self.momentum*updatew1)
+            print ("np.dot(np.transpose(inputs),deltah[:,:-1])\n", np.dot(np.transpose(inputs),deltah[:,:-1]))
             updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
+            print ("update1\n",updatew1)
             updatew2 = eta*(np.dot(np.transpose(self.hidden),deltao)) + self.momentum*updatew2
             self.weights1 -= updatew1
             self.weights2 -= updatew2
@@ -101,16 +111,15 @@ class mlp:
         """ Run the network forward """
 
         self.hidden = np.dot(inputs,self.weights1)
+        print("hidden\n",np.dot(inputs,self.weights1))
         self.hidden = 1.0/(1.0+np.exp(-self.beta*self.hidden))
         self.hidden = np.concatenate((self.hidden,-np.ones((np.shape(inputs)[0],1))),axis=1)
-        #    inputs = np.concatenate((inputs,     -np.ones((self.ndata,1))),axis=1)
-
 
         outputs = np.dot(self.hidden,self.weights2)
 
-
         # Different types of output neurons
         res2 = 1.0/(1.0+np.exp(-self.beta*outputs))
+        print (res2)
         if self.outtype == 'linear':
             return outputs
         elif self.outtype == 'logistic':
@@ -120,6 +129,7 @@ class mlp:
             return np.transpose(np.transpose(np.exp(outputs))/normalisers)
         else:
             print("error")
+
 
     def confmat(self,inputs,targets):
         """Confusion matrix"""

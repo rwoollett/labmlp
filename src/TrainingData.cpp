@@ -313,10 +313,9 @@ namespace ML::DataSet
     // pcn.confmat(trainInputs, trainTargets);
 
     int nHidden = 10;
-    double beta = 1.0;
     int nIterations = 8001;
 
-    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden, beta);
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
     mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
 
     mlp.confmat(trainInputs, trainTargets);
@@ -359,20 +358,16 @@ namespace ML::DataSet
 
   void trainXOrMLP()
   {
-    double learningRateETA = 0.15;
+    double learningRateETA = 0.25;
     int nHidden = 2;
-    double beta = 1.0;
-    int nIterations = 5000;
+    int nIterations = 3000;
 
     MatrixXd trainInputs(4, 2);
     trainInputs << 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0;
-    // MatrixXd trainInputs(4, 2);
-    // trainInputs << 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0;
-
     MatrixXd trainTargets(4, 1);
     trainTargets << 0.0, 1.0, 1.0, 0.0;
 
-    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden, beta);
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
     mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
 
     mlp.confmat(trainInputs, trainTargets);

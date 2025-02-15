@@ -66,6 +66,12 @@ namespace ML
       auto transposeInputs = inputsWithBiasEntry.transpose();
       D(std::cout << "transpose inputs: " << i << " " << std::endl
                   << transposeInputs << std::endl;)
+      std::cout << "m_weights" << std::endl;
+      std::cout << m_weights << std::endl;
+      std::cout << "(transposeInputs * (thresholdactivations - targets))" << std::endl;
+      std::cout << (transposeInputs * (thresholdactivations - targets)) << std::endl;
+      std::cout << "eta * (transposeInputs * (thresholdactivations - targets))" << std::endl;
+      std::cout << eta * (transposeInputs * (thresholdactivations - targets)) << std::endl;
       m_weights -= eta * (transposeInputs * (thresholdactivations - targets));
       D(std::cout << "train weights at iter: " << i << " " << std::endl
                   << m_weights << std::endl;)
@@ -119,18 +125,18 @@ namespace ML
     {
       // 1-of-N enoding
       D(std::cout << "network size: no. of classes " << nClasses << std::endl
-                << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;)
+                  << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;)
       D(std::cout << "Outputs before indicemax: " << std::endl
-                << outputs << std::endl;)
+                  << outputs << std::endl;)
       D(std::cout << "Targets before IndiceMax: " << std::endl
-                << targets << std::endl;)
+                  << targets << std::endl;)
 
       outputs = indiceMax(outputs, m_nData, m_nOut);
       targets = indiceMax(targets, m_nData, m_nOut);
       D(std::cout << "Outputs As IndiceMax: " << std::endl
-                << outputs << std::endl;)
+                  << outputs << std::endl;)
       D(std::cout << "Targets As IndiceMax: " << std::endl
-                << targets << std::endl;)
+                  << targets << std::endl;)
       a = ArrayXXd(m_nData, 1);
       a.fill(1.0);
       b = ArrayXXd(m_nData, 1);

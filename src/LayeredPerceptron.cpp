@@ -12,13 +12,13 @@ constexpr double HasStd = 1.0;
 
 namespace ML
 {
-  LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets, int nhidden, double beta)
-      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{beta}
+  LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets, int nhidden)
+      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{1.0}, m_momentum{0.8}
   {
 
     std::seed_seq seed_seq{static_cast<long unsigned int>(time(0))};
     std::default_random_engine random_engine{seed_seq};
-    std::uniform_real_distribution<double> uidfRandom{0, 1};
+    std::uniform_real_distribution<double> uidfRandom{-1, 0.99999};
 
     // Set up network size
     int nIn = 1;
@@ -45,26 +45,37 @@ namespace ML
     {
       for (int j = 0; j < m_nHidden; j++)
       {
-        randmat1(i, j) = (uidfRandom(random_engine) - 0.5) * 2 / std::sqrt(m_nIn);
+        auto zero1 = (0.5 * (uidfRandom(random_engine) + 1));
+        randmat1(i, j) = (zero1 - 0.5) * 2 / std::sqrt(m_nIn);
       }
     };
     for (int i = 0; i < (m_nHidden + 1); i++)
     {
       for (int j = 0; j < m_nOut; j++)
       {
-        randmat2(i, j) = (uidfRandom(random_engine) - 0.5) * 2 / std::sqrt(m_nHidden);
+        auto zero1 = (0.5 * (uidfRandom(random_engine) + 1));
+        randmat2(i, j) = (zero1 - 0.5) * 2 / std::sqrt(m_nHidden);
       }
     };
-  
+
     m_weights1 = MatrixXd(m_nIn + 1, m_nHidden);
     m_weights1 << randmat1;
     m_weights2 = MatrixXd(m_nHidden + 1, m_nOut);
     m_weights2 << randmat2;
 
+    m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
+    m_updatew1.setZero();
+    m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
+    m_updatew2.setZero();
+
     std::cout << "random weights1 in network initialized: " << std::endl
               << m_weights1 << std::endl;
     std::cout << "random weights2 in network initialized: " << std::endl
               << m_weights2 << std::endl;
+    std::cout << "random weights1 in network initialized: " << std::endl
+              << m_updatew1 << std::endl;
+    std::cout << "random weights2 in network initialized: " << std::endl
+              << m_updatew2 << std::endl;
     std::cout << "====" << std::endl;
   }
 
@@ -76,17 +87,46 @@ namespace ML
     inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
 
+    MatrixXd trainTargets = targets;
+
     D(std::cout << "train inputs: " << std::endl
                 << inputs << std::endl;)
     D(std::cout << "train inputs with bias: " << std::endl
                 << inputsWithBiasEntry << std::endl;)
     D(std::cout << "train targets " << std::endl
-                << targets << std::endl;)
+                << trainTargets << std::endl;)
 
     for (int i = 0; i < nIterations; i++)
     {
-      // we bedoing fwd and bck in mlpfwd
-      mlpfwd(inputsWithBiasEntry, targets, eta, i);
+// we bedoing fwd and bck in mlpfwd
+#ifndef NDEBUG
+      std::cout << "train inputs with bias: " << std::endl
+                << inputsWithBiasEntry << std::endl;
+      std::cout << "train targets " << std::endl
+                << trainTargets << std::endl;
+#endif
+      mlpfwd(inputsWithBiasEntry, trainTargets, eta, i);
+
+      // shuffle inputsWithBiasEntry and targets
+      // Shuffle inputs and target to same place
+      auto shuffle = [](int size)
+      {
+        std::vector<int> shuffled(size);
+        std::iota(shuffled.begin(), shuffled.end(), 0);
+        std::random_shuffle(shuffled.begin(), shuffled.end());
+        return shuffled;
+      };
+
+      int countIndex = 0;
+      MatrixXd tmpInputs = inputsWithBiasEntry;
+      MatrixXd tmpTargets = trainTargets;
+      std::vector<int> shuffleIndex = shuffle(m_nData);
+      for (int i = 0; i < shuffleIndex.size(); i++)
+      {
+        inputsWithBiasEntry.row(countIndex) = tmpInputs.row(shuffleIndex[i]);
+        trainTargets.row(countIndex) = tmpTargets.row(shuffleIndex[i]);
+        countIndex++;
+      }
     }
   }
 
@@ -101,192 +141,176 @@ namespace ML
     MatrixXd nOutputActivation(m_nData, m_nOut);
     nOutputActivation.fill(0);
 
-    // std::cout << "nHiddenActivations init " << std::endl;
-    // std::cout << nHiddenActivationWithBias << std::endl;
-    // std::cout << "nOutputActivation init " << std::endl;
-    // std::cout << nOutputActivation << std::endl;
-
     // updatew1 = np.zeros((np.shape(self.weights1)))
     // updatew2 = np.zeros((np.shape(self.weights2)))
     // MatrixXd dataUpdateW1 = MatrixXd(m_nIn + 1, m_nHidden);
+    m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
+    m_updatew1.setZero();
+    m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
+    m_updatew2.setZero();
 
+    // for (int nData = 0; nData < m_nData; nData++)
     for (int nData = 0; nData < m_nData; nData++)
     {
       for (int n = 0; n < m_nHidden; n++)
       {
-
         nHiddenActivationWithBias(nData, n) = 0;
-
         for (int m = 0; m < m_nIn + 1; m++)
         {
-        //  D(std::cout << "m=" << m << ", w=" << m_weights1(m, n) << " x=" << inputs(nData, m) << std::endl;)
           auto connect = (inputs(nData, m) * m_weights1(m, n));
           nHiddenActivationWithBias(nData, n) += connect;
-        //  D(std::cout << "w*x=" << connect << std::endl;)
         }
 
-        //D(std::cout << "at n, sum Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
         double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
-        nHiddenActivationWithBias(nData, n) = resH;//(1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
-        // D(std::cout << "at n, activation Z= " << nHiddenActivationWithBias(nData, n) << " " << std::endl;)
-        // D(std::cout << "nData n at: " << nData << " " << n << " " << std::endl;)
+        nHiddenActivationWithBias(nData, n) = resH; //(1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
       }
 
       // Now do output layer after hidden layer ; use logistic activation
-
       for (int o = 0; o < m_nOut; o++)
       {
         nOutputActivation(nData, o) = 0;
-
         for (int m = 0; m < m_nHidden + 1; m++)
         {
-          // D(std::cout << "m=" << m << ", w=" << m_weights2(m, o) << " x=" << inputs(nData, m) << std::endl;)
           auto connect = (nHiddenActivationWithBias(nData, m) * m_weights2(m, o));
           nOutputActivation(nData, o) += connect;
-          // D(std::cout << "w*x=" << connect << std::endl;)
         }
-    //    std::cout << "at n, sum K= " << nOutputActivation(nData, o) << " " << std::endl;
-        // calculate nData activation
-        // self.hidden = 1.0/(1.0+np.exp(-self.beta*self.hidden))
-        // double nOutputA = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
+
         double resO = 1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
-        nOutputActivation(nData, o) = resO;//1.0 / (1.0 + std::exp(-1 * m_beta * nOutputActivation(nData, o)));
-
-        // D(std::cout << "at n, activation K= " << nOutputActivation(nData, o) << " " << std::endl;)
-        // D(std::cout << "nData o at: " << nData << " " << o << " " << std::endl;)
+        nOutputActivation(nData, o) = resO;
       }
-
-      /////
-      // std::cout << "nOutputActivation " << std::endl
-      //           << nOutputActivation.row(nData) << std::endl;
-      // std::cout << "nHiddenActivation " << std::endl
-      //           << nHiddenActivationWithBias.row(nData) << std::endl;
-
-      // std::cout << "train weights 1: " << std::endl
-      //           << m_weights1 << std::endl;
-      // std::cout << "train weights 2: " << std::endl
-      //           << m_weights2 << std::endl;
-
-      // std::cout << "=========" << std::endl;
-      // D(std::cout << "train targets " << std::endl
-      //             << targets << std::endl;)
-      // std::cout << "=========" << std::endl;
 
       // sequential updates weight
       // deltao = self.beta*(self.outputs-targets)*self.outputs*(1.0-self.outputs)
       MatrixXd deltaO(1, m_nOut);
-      // std::cout << "targets at nData:" << std::endl;
-      // std::cout << targets.row(nData) << std::endl;
-      // std::cout << "output activations at nData:" << std::endl;
-      // std::cout << nOutputActivation.row(nData) << std::endl;
 
+#ifndef NDEBUG
+      std::cout << "iteration, nData n" << std::endl;
+      std::cout << iteration << ", " << nData << std::endl;
+      std::cout << "nHiddenActivationWithBias.row(nData)" << std::endl;
+      std::cout << nHiddenActivationWithBias.row(nData) << std::endl;
+      std::cout << "nOutputActivation.row(nData)" << std::endl;
+      std::cout << nOutputActivation.row(nData) << std::endl;
+      std::cout << "nOutputActivation.row(nData) - targets.row(nData)).array()" << std::endl;
+      std::cout << (nOutputActivation.row(nData) - targets.row(nData)).array() << std::endl;
+      std::cout << "nOutputActivation.col(0)" << std::endl;
+      std::cout << nOutputActivation.col(0) << std::endl;
+#endif
       deltaO << (m_beta *
                  (nOutputActivation.row(nData) - targets.row(nData)).array() *
                  nOutputActivation.row(nData).array() *
-                 (1.0 - nOutputActivation.row(nData).array()).array())
+                 (1.0 - nOutputActivation.row(nData).array()))
                     .eval();
-      // std::cout << "deltaO with required element wise mulitplication" << std::endl;
-      // std::cout << deltaO << std::endl;
-      // std::cout << "=========" << std::endl;
 
       MatrixXd deltaH(1, m_nHidden + 1);
-      // deltah = self.hidden*self.beta*(1.0-self.hidden)*(np.dot(deltao,np.transpose(self.weights2)))
-      // MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
-      //  m_weights2 = MatrixXd(m_nHidden + 1, m_nOut);
 
-      // std::cout << "deltaO row 0" << std::endl;
-      // std::cout << deltaO.row(0) << std::endl;
-
-      // std::cout << "nHiddenActivationWithBias.row(nData).array() * m_beta" << std::endl;
-      // std::cout << nHiddenActivationWithBias.row(nData).array() * m_beta << std::endl;
-
-      // std::cout << "(1 - nHiddenActivationWithBias.row(nData).array()).array()" << std::endl;
-      // std::cout << (1 - nHiddenActivationWithBias.row(nData).array()).array() << std::endl;
-
-      // std::cout << "nHidden .. * (1 -..  " << std::endl;
-      // std::cout << (nHiddenActivationWithBias.row(nData).array() * m_beta).array() *
-      //                  (1 - nHiddenActivationWithBias.row(nData).array()).array()
-      //           << std::endl;
-
-      // std::cout << "deltaH << " << std::endl;
-      // std::cout << ((nHiddenActivationWithBias.row(nData).array() * m_beta).array() *
-      //               (1 - nHiddenActivationWithBias.row(nData).array()).array() *
-      //               (deltaO * m_weights2.transpose()).array())
-      //           << std::endl;
+#ifndef NDEBUG
+      std::cout << "=========" << std::endl;
+      std::cout << deltaO << std::endl;
+      std::cout << "=========" << std::endl;
+      std::cout << "deltaO row 0" << std::endl;
+      std::cout << deltaO.row(0) << std::endl;
+      std::cout << "nHiddenActivationWithBias.row(nData).array() * m_beta" << std::endl;
+      std::cout << nHiddenActivationWithBias.row(nData).array() * m_beta << std::endl;
+      std::cout << "(1 - nHiddenActivationWithBias.row(nData).array()).array()" << std::endl;
+      std::cout << (1 - nHiddenActivationWithBias.row(nData).array()).array() << std::endl;
+      std::cout << "nHidden .. * (1 -..  " << std::endl;
+      std::cout << (nHiddenActivationWithBias.row(nData).array() * m_beta).array() *
+                       (1 - nHiddenActivationWithBias.row(nData).array()).array()
+                << std::endl;
+      std::cout << "m_weights2" << std::endl;
+      std::cout << m_weights2 << std::endl;
+      std::cout << "deltaO * m_weights2.transpose()" << std::endl;
+      std::cout << deltaO * m_weights2.transpose() << std::endl;
+#endif
 
       deltaH << ((nHiddenActivationWithBias.row(nData).array() * m_beta).array() *
                  (1.0 - nHiddenActivationWithBias.row(nData).array()).array() *
                  (deltaO * m_weights2.transpose()).array())
                     .eval();
-      // std::cout << "deltaH with required element wise mulitplication" << std::endl;
-      // std::cout << deltaH << std::endl;
-      // std::cout << "=========" << std::endl;
 
-      // tmp2 = deltah[:,:-1]
-      // Update the layers weight at item nData
-      // std::cout << "inputs.row(nData).transpose()" << std::endl;
-      // std::cout << inputs.row(nData).transpose() << std::endl;
-      // std::cout << "deltaH(seqN(1, 1), seqN(nData, m_nHidden))" << std::endl;
-      // std::cout << deltaH(seqN(0, 1), seqN(0, m_nHidden)) << std::endl;
-
-      // std::cout << "inputs * deltaH(1, seqN(nData, m_nHidden))" << std::endl;
-      // std::cout << inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden)) << std::endl;
-      // std::cout << "=========" << std::endl;
+#ifndef NDEBUG
+      std::cout << "deltaH" << std::endl;
+      std::cout << deltaH << std::endl;
+      std::cout << "deltaH(seqN(0, 1), seqN(0, m_nHidden)" << std::endl;
+      std::cout << deltaH(seqN(0, 1), seqN(0, m_nHidden)) << std::endl;
+      std::cout << "inputs.row(nData).transpose()" << std::endl;
+      std::cout << inputs.row(nData).transpose() << std::endl;
+      std::cout << "=========" << std::endl;
+      std::cout << "m_weights1" << std::endl;
+      std::cout << m_weights1 << std::endl;
+      std::cout << "inputs * deltaH(1, seqN(nData, m_nHidden))" << std::endl;
+      std::cout << inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden)) << std::endl;
+      std::cout << "eta * (inputs * deltaH(1, seqN(nData, m_nHidden)))" << std::endl;
+      std::cout << eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden))) << std::endl;
+#endif
 
       MatrixXd nDataUpdateW1 = MatrixXd(m_nIn + 1, m_nHidden);
       // updatew1 = eta*(np.dot(np.transpose(inputs),deltah[:,:-1])) + self.momentum*updatew1
-      nDataUpdateW1 = (eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden)))).eval();
+      m_updatew1 = (eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden))) + m_momentum * m_updatew1).eval();
 
-      // std::cout << "nHiddenActivationWithBias.row(nData)" << std::endl;
-      // std::cout << nHiddenActivationWithBias.row(nData) << std::endl;
-      // std::cout << "nHiddenActivationWithBias.row(nData).transpose()" << std::endl;
-      // std::cout << nHiddenActivationWithBias.row(nData).transpose() << std::endl;
-      // std::cout << "deltaO" << std::endl;
-      // std::cout << deltaO << std::endl;
-      // std::cout << "nHiddenActivationWithBias * deltaO" << std::endl;
-      // std::cout << nHiddenActivationWithBias.row(nData).transpose() * deltaO << std::endl;
-      // std::cout << "=========" << std::endl;
+#ifndef NDEBUG
+      std::cout << "=========" << std::endl;
+      std::cout << "nDataUpdateW1" << std::endl;
+      std::cout << nDataUpdateW1 << std::endl;
+      std::cout << "=========" << std::endl;
+      std::cout << "nHiddenActivationWithBias.row(nData)" << std::endl;
+      std::cout << nHiddenActivationWithBias.row(nData) << std::endl;
+      std::cout << "nHiddenActivationWithBias.row(nData).transpose()" << std::endl;
+      std::cout << nHiddenActivationWithBias.row(nData).transpose() << std::endl;
+      std::cout << "deltaO" << std::endl;
+      std::cout << deltaO << std::endl;
+      std::cout << "nHiddenActivationWithBias * deltaO" << std::endl;
+      std::cout << nHiddenActivationWithBias.row(nData).transpose() * deltaO << std::endl;
+      std::cout << "=========" << std::endl;
+#endif
 
       MatrixXd nDataUpdateW2 = MatrixXd(m_nHidden + 1, m_nOut);
       // updatew2 = eta*(np.dot(np.transpose(self.hidden),deltao)) + self.momentum*updatew2
-      nDataUpdateW2 = (eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO)).eval();
+      m_updatew2 = (eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO) + m_momentum * m_updatew2).eval();
 
-      // std::cout << "m_weights1" << std::endl;
-      // std::cout << m_weights1 << std::endl;
-      // std::cout << "nDataUpdateW1" << std::endl;
-      // std::cout << nDataUpdateW1 << std::endl;
+#ifndef NDEBUG
+      std::cout << "m_updatew1" << std::endl;
+      std::cout << m_updatew1 << std::endl;
+      std::cout << "m_updatew2" << std::endl;
+      std::cout << m_updatew2 << std::endl;
 
-      // std::cout << "m_weights1 - nDataUpdateW1" << std::endl;
-      // std::cout << m_weights1 - nDataUpdateW1 << std::endl;
-      // std::cout << "=========" << std::endl;
+      std::cout << "m_weights1" << std::endl;
+      std::cout << m_weights1 << std::endl;
+      std::cout << "m_weights1 - nDataUpdateW1" << std::endl;
+      std::cout << m_weights1 - nDataUpdateW1 << std::endl;
+      std::cout << "=========" << std::endl;
+      std::cout << "m_weights1" << std::endl;
+      std::cout << m_weights1 << std::endl;
+      std::cout << "m_weights2" << std::endl;
+      std::cout << m_weights2 << std::endl;
+      std::cout << "nDataUpdateW2" << std::endl;
+      std::cout << nDataUpdateW2 << std::endl;
+      std::cout << "m_weights2 - nDataUpdateW2" << std::endl;
+      std::cout << m_weights2 - nDataUpdateW2 << std::endl;
+      std::cout << "=========" << std::endl;
+#endif
 
-      // std::cout << "m_weights2" << std::endl;
-      // std::cout << m_weights2 << std::endl;
-      // std::cout << "nDataUpdateW1" << std::endl;
-      // std::cout << nDataUpdateW2 << std::endl;
+      m_weights1 = (m_weights1 - m_updatew1).eval();
+      m_weights2 = (m_weights2 - m_updatew2).eval();
 
-      // std::cout << "m_weights2 - nDataUpdateW2" << std::endl;
-      // std::cout << m_weights2 - nDataUpdateW2 << std::endl;
-      // std::cout << "=========" << std::endl;
-
-      m_weights1 = (m_weights1 - nDataUpdateW1).eval();
-      m_weights2 = (m_weights2 - nDataUpdateW2).eval();
-
-      // std::cout << "m_weights1 after update" << std::endl;
-      // std::cout << m_weights1 << std::endl;
-      // std::cout << "m_weights2 after update" << std::endl;
-      // std::cout << m_weights2 << std::endl;
-      // std::cout << "=========" << std::endl;
+#ifndef NDEBUG
+      std::cout << "m_weights1 after update" << std::endl;
+      std::cout << m_weights1 << std::endl;
+      std::cout << "m_weights2 after update" << std::endl;
+      std::cout << m_weights2 << std::endl;
+      std::cout << "=========" << std::endl;
+#endif
     }
 
     MatrixXd findError(m_nData, m_nOut);
     findError << (nOutputActivation - targets).eval();
-    findError = findError.array().pow(2.0);
+    findError = (findError.array().pow(2.0)).eval();
     double error = 0.5 * findError.array().sum();
 
     if (iteration % 100 == 0)
     {
       std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
+      std::cout << "Outputs: " << nOutputActivation << std::endl;
     }
   }
 
