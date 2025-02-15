@@ -4,8 +4,8 @@ build
 __pycache__
 .vscode
 mnist.pkl.gz
-lab4.pdf
-
+lab5.pdf
+scratch.txt
 dataset/mnist.pkl
 dataset/mnist.pkl.gz
 
