@@ -163,25 +163,7 @@ namespace ML
 
       // std::cout << "nOutputActivation after fwd" << std::endl;
 
-      //  sequential updates weight
-      //  deltao = self.beta*(self.outputs-targets)*self.outputs*(1.0-self.outputs)
-      MatrixXd deltaO(1, m_nOut);
-      deltaO << (m_beta *
-                 (nOutputActivation.row(nData) - targets.row(nData)).array() *
-                 nOutputActivation.row(nData).array() *
-                 (1.0 - nOutputActivation.row(nData).array()))
-                    .eval();
-
-      MatrixXd deltaH(1, m_nHidden + 1);
-      deltaH << ((nHiddenActivationWithBias.row(nData).array() * m_beta).array() *
-                 (1.0 - nHiddenActivationWithBias.row(nData).array()).array() *
-                 (deltaO * m_weights2.transpose()).array())
-                    .eval();
-
-      m_updatew1 = (eta * (inputs.row(nData).transpose() * deltaH(seqN(0, 1), seqN(0, m_nHidden))) + m_momentum * m_updatew1).eval();
-      m_updatew2 = (eta * (nHiddenActivationWithBias.row(nData).transpose() * deltaO) + m_momentum * m_updatew2).eval();
-      m_weights1 = (m_weights1 - m_updatew1).eval();
-      m_weights2 = (m_weights2 - m_updatew2).eval();
+      mlpback(inputs, targets, nOutputActivation, nHiddenActivationWithBias, eta, nData);
     }
 
     MatrixXd findError(m_nData, m_nOut);
