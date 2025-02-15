@@ -33,6 +33,21 @@ namespace ML
               << " nIn: " << m_nIn << ", nHidden:" << m_nHidden << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
 
     // # Initialise network
+    // MatrixXd biasInput(m_nData, 1);
+    // biasInput.fill(-1.0);
+    // MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
+    // nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden).fill(0);
+    // nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
+
+    m_hiddenLayer = MatrixXd(m_nData, m_nHidden + 1);
+    // m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
+    // m_hiddenLayer.col(m_nHidden).tail(m_nData) << biasInput;
+
+    m_outputs = MatrixXd(m_nData, m_nOut);
+    //    nOutputActivation.fill(0);
+    //    MatrixXd nOutputActivation(m_nData, m_nOut);
+    m_outputs.fill(0);
+
     MatrixXd randmat1 = MatrixXd(m_nIn + 1, m_nHidden);
     MatrixXd randmat2 = MatrixXd(m_nHidden + 1, m_nOut);
     for (int i = 0; i < (m_nIn + 1); i++)
@@ -73,9 +88,14 @@ namespace ML
   {
     MatrixXd biasInput(m_nData, 1);
     biasInput.fill(-1.0);
+
     MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
     inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
+
+    m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
+    m_hiddenLayer.col(m_nHidden).tail(m_nData) << biasInput;
+    m_outputs.fill(0);
 
     MatrixXd trainTargets = targets;
 
@@ -91,9 +111,23 @@ namespace ML
     m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
     m_updatew2.setZero();
 
-    for (int i = 0; i < nIterations; i++)
+    for (int iteration = 0; iteration < nIterations; iteration++)
     {
-      mlpfwd(inputsWithBiasEntry, trainTargets, eta, i);
+      for (int nData = 0; nData < m_nData; nData++)
+      {
+        mlpfwd(inputsWithBiasEntry, trainTargets, nData);
+        mlpback(inputsWithBiasEntry, trainTargets, nData, eta);
+      }
+
+      MatrixXd findError(m_nData, m_nOut);
+      findError << (m_outputs - trainTargets).eval();
+      findError = (findError.array().pow(2.0)).eval();
+      double error = 0.5 * findError.array().sum();
+
+      if (iteration % 100 == 0)
+      {
+        std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
+      }
 
       // Shuffle inputs and target to same place
       auto shuffle = [](int size)
@@ -117,63 +151,34 @@ namespace ML
     }
   }
 
-  void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, double eta, int iteration)
+  void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, int nData)
   {
-    MatrixXd biasInput(m_nData, 1);
-    biasInput.fill(-1.0);
-    MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
-    nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden).fill(0);
-    nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
-
-    MatrixXd nOutputActivation(m_nData, m_nOut);
-    nOutputActivation.fill(0);
-
-    // m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
-    // m_updatew1.setZero();
-    // m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
-    // m_updatew2.setZero();
-
-    for (int nData = 0; nData < m_nData; nData++)
+    // Go forward through hidden layer and output layer
+    // Use logistic activation
+    for (int n = 0; n < m_nHidden; n++)
     {
-      for (int n = 0; n < m_nHidden; n++)
+      m_hiddenLayer(nData, n) = 0;
+      for (int m = 0; m < m_nIn + 1; m++)
       {
-        nHiddenActivationWithBias(nData, n) = 0;
-        for (int m = 0; m < m_nIn + 1; m++)
-        {
-          auto connect = (inputs(nData, m) * m_weights1(m, n));
-          nHiddenActivationWithBias(nData, n) += connect;
-        }
-
-        double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
-        nHiddenActivationWithBias(nData, n) = resH; 
+        auto connect = (inputs(nData, m) * m_weights1(m, n));
+        m_hiddenLayer(nData, n) += connect;
       }
-
-      // Now do output layer after hidden layer ; use logistic activation
-      for (int o = 0; o < m_nOut; o++)
-      {
-        nOutputActivation(nData, o) = 0;
-        for (int m = 0; m < m_nHidden + 1; m++)
-        {
-          auto connect = (nHiddenActivationWithBias(nData, m) * m_weights2(m, o));
-          nOutputActivation(nData, o) += connect;
-        }
-        double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * nOutputActivation(nData, o)));
-        nOutputActivation(nData, o) = resO;
-      }
-
-      // std::cout << "nOutputActivation after fwd" << std::endl;
-
-      mlpback(inputs, targets, nOutputActivation, nHiddenActivationWithBias, eta, nData);
+      // activation
+      double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * m_hiddenLayer(nData, n))));
+      m_hiddenLayer(nData, n) = resH;
     }
 
-    MatrixXd findError(m_nData, m_nOut);
-    findError << (nOutputActivation - targets).eval();
-    findError = (findError.array().pow(2.0)).eval();
-    double error = 0.5 * findError.array().sum();
-
-    if (iteration % 100 == 0)
+    for (int o = 0; o < m_nOut; o++)
     {
-      std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
+      m_outputs(nData, o) = 0;
+      for (int m = 0; m < m_nHidden + 1; m++)
+      {
+        auto connect = (m_hiddenLayer(nData, m) * m_weights2(m, o));
+        m_outputs(nData, o) += connect;
+      }
+      // activation
+      double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * m_outputs(nData, o)));
+      m_outputs(nData, o) = resO;
     }
   }
 
@@ -217,6 +222,7 @@ namespace ML
       }
     }
     // end of fwd process - outputs are the activated results
+
     std::cout << "Outputs" << std::endl;
     std::cout << outputs << std::endl;
 
