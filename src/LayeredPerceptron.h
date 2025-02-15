@@ -41,6 +41,7 @@ namespace ML
 
     void mlpback(const MatrixXd &inputs, const MatrixXd &targets, int nData, double eta)
     {
+      // arg inputs should be passed in with bias entry added
       //  sequential updates weight
       MatrixXd deltaO(1, m_nOut);
       MatrixXd deltaH(1, m_nHidden + 1);
@@ -62,7 +63,7 @@ namespace ML
       m_weights2 = (m_weights2 - m_updatew2).eval();
     };
 
-    void confmat(const MatrixXd &inputs, MatrixXd targets);
+    void confmat(const MatrixXd &inputs, const MatrixXd &targets);
 
     ArrayXd indiceMax(const MatrixXd &matrix, int nData, int recordLength);
   };

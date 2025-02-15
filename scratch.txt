@@ -1,43 +1,27 @@
-np.transpose(inputs)
- [[ 0.  0.  1.  1.]
- [ 0.  1.  0.  1.]
- [-1. -1. -1. -1.]]
-deltah[:,:-1]
- [[ 0.00512047  0.01426333]
- [-0.00227956 -0.00577028]
- [-0.00250619 -0.00703676]
- [ 0.00459503  0.01447182]]
-np.dot(np.transpose(inputs),deltah[:,:-1])
- [[ 0.00208884  0.00743506]
- [ 0.00231547  0.00870154]
- [-0.00492975 -0.01592811]]
-update1
- [[ 0.00052221  0.00185876]
- [ 0.00057887  0.00217539]
- [-0.00123244 -0.00398203]]
+    //    MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
+//    MatrixXd outputs(m_nData, m_nOut);
+    // nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden) << inputsWithBiasEntry * m_weights1;
+    // nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
+    // the following equationa are the fwd process of the mlp train
+    // TODO: make the fwd process just do the fwd step and a new bckpropagate function in the train
+    // for (int nData = 0; nData < m_nData; nData++)
+    // {
+    //   for (int n = 0; n < m_nHidden; n++)
+    //   {
+    //     double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
+    //     nHiddenActivationWithBias(nData, n) = resH; //(1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
+    //   }
+    // }
 
+    
+    // outputs = nHiddenActivationWithBias * m_weights2;
 
-
-m_weights1
--0.0352332   0.329208
- 0.0160481   0.450938
- -0.163383  -0.228804
-m_weights1 - nDataUpdateW1
--0.0352332   0.329208
- 0.0160481   0.450938
-  -0.16278  -0.226682
-=========
-m_weights1
--0.0352332   0.329208
- 0.0160481   0.450938
- -0.163383  -0.228804
-
-m_weights1 after update
--0.0352332   0.329208
- 0.0160481   0.450938
-  -0.16278  -0.226682
-
-m_weights1
--0.0352332   0.329208
- 0.0160481   0.450938
-  -0.16278  -0.226682
+    // for (int nData = 0; nData < m_nData; nData++)
+    // {
+    //   for (int o = 0; o < m_nOut; o++)
+    //   {
+    //     double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * outputs(nData, o)));
+    //     outputs(nData, o) = resO;
+    //   }
+    // }
+    // end of fwd process - outputs are the activated results

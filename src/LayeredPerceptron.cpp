@@ -33,19 +33,10 @@ namespace ML
               << " nIn: " << m_nIn << ", nHidden:" << m_nHidden << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
 
     // # Initialise network
-    // MatrixXd biasInput(m_nData, 1);
-    // biasInput.fill(-1.0);
-    // MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
-    // nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden).fill(0);
-    // nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
-
     m_hiddenLayer = MatrixXd(m_nData, m_nHidden + 1);
-    // m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
-    // m_hiddenLayer.col(m_nHidden).tail(m_nData) << biasInput;
+    m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
 
     m_outputs = MatrixXd(m_nData, m_nOut);
-    //    nOutputActivation.fill(0);
-    //    MatrixXd nOutputActivation(m_nData, m_nOut);
     m_outputs.fill(0);
 
     MatrixXd randmat1 = MatrixXd(m_nIn + 1, m_nHidden);
@@ -89,6 +80,7 @@ namespace ML
     MatrixXd biasInput(m_nData, 1);
     biasInput.fill(-1.0);
 
+    // Add bias entry to inputs
     MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
     inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
@@ -153,6 +145,7 @@ namespace ML
 
   void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, int nData)
   {
+    // arg inputs should be passed in with bias entry added
     // Go forward through hidden layer and output layer
     // Use logistic activation
     for (int n = 0; n < m_nHidden; n++)
@@ -182,55 +175,32 @@ namespace ML
     }
   }
 
-  void LayeredPerceptron::confmat(const MatrixXd &inputs, MatrixXd targets)
+  void LayeredPerceptron::confmat(const MatrixXd &inputs, const MatrixXd &targets)
   {
+    ArrayXXd a(m_nData, m_nOut);
+    ArrayXXd b(m_nData, m_nOut);
     MatrixXd biasInput(m_nData, 1);
-    biasInput.fill(-1.0);
     MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
-    MatrixXd nHiddenActivationWithBias(m_nData, m_nHidden + 1);
-    MatrixXd outputs(m_nData, m_nOut);
-    Eigen::ArrayXXd a(m_nData, m_nOut);
-    Eigen::ArrayXXd b(m_nData, m_nOut);
-
+    MatrixXd trainTargets = targets;
     a.fill(1.0);
     b.fill(0);
-
+    biasInput.fill(-1.0);
     inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
-    nHiddenActivationWithBias.block(0, 0, m_nData, m_nHidden) << inputsWithBiasEntry * m_weights1;
-    nHiddenActivationWithBias.col(m_nHidden).tail(m_nData) << biasInput;
-
-    // the following equationa are the fwd process of the mlp train
-    // TODO: make the fwd process just do the fwd step and a new bckpropagate function in the train
-    for (int nData = 0; nData < m_nData; nData++)
-    {
-      for (int n = 0; n < m_nHidden; n++)
-      {
-        double resH = (1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
-        nHiddenActivationWithBias(nData, n) = resH; //(1.0 / (1.0 + std::exp(-1.0 * m_beta * nHiddenActivationWithBias(nData, n))));
-      }
-    }
-
-    outputs = nHiddenActivationWithBias * m_weights2;
 
     for (int nData = 0; nData < m_nData; nData++)
     {
-      for (int o = 0; o < m_nOut; o++)
-      {
-        double resO = 1.0 / (1.0 + std::exp(-1.0 * m_beta * outputs(nData, o)));
-        outputs(nData, o) = resO;
-      }
+      mlpfwd(inputsWithBiasEntry, trainTargets, nData);
     }
-    // end of fwd process - outputs are the activated results
 
     std::cout << "Outputs" << std::endl;
-    std::cout << outputs << std::endl;
+    std::cout << m_outputs << std::endl;
 
-    int nClasses = targets.outerSize();
+    int nClasses = trainTargets.outerSize();
     if (nClasses == 1)
     {
       nClasses = 2;
-      outputs = (outputs.array() > 0.5).select(a, b);
+      m_outputs = (m_outputs.array() > 0.5).select(a, b);
     }
     else
     {
@@ -238,16 +208,18 @@ namespace ML
       D(std::cout << "network size: no. of classes " << nClasses << std::endl
                   << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;)
       D(std::cout << "Outputs before indicemax: " << std::endl
-                  << outputs << std::endl;)
+                  << m_outputs << std::endl;)
       D(std::cout << "Targets before IndiceMax: " << std::endl
-                  << targets << std::endl;)
+                  << trainTargets << std::endl;)
 
-      outputs = indiceMax(outputs, m_nData, m_nOut);
-      targets = indiceMax(targets, m_nData, m_nOut);
+      m_outputs = indiceMax(m_outputs, m_nData, m_nOut);
+      trainTargets = indiceMax(trainTargets, m_nData, m_nOut);
+
       D(std::cout << "Outputs As IndiceMax: " << std::endl
-                  << outputs << std::endl;)
+                  << m_outputs << std::endl;)
       D(std::cout << "Targets As IndiceMax: " << std::endl
-                  << targets << std::endl;)
+                  << trainTargets << std::endl;)
+
       a = ArrayXXd(m_nData, 1);
       a.fill(1.0);
       b = ArrayXXd(m_nData, 1);
@@ -260,7 +232,7 @@ namespace ML
     {
       for (int j = 0; j < nClasses; j++)
       {
-        auto classSum = (((outputs.array() == i).select(a, b)) * ((targets.array() == j).select(a, b))).sum();
+        auto classSum = (((m_outputs.array() == i).select(a, b)) * ((trainTargets.array() == j).select(a, b))).sum();
         cm(i, j) = classSum;
       }
     }
