@@ -368,8 +368,8 @@ namespace ML::DataSet
     trainTargets << 0.0, 1.0, 1.0, 0.0;
 
     LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
-    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
-    mlp.confmat(trainInputs, trainTargets);
+   // mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+   // mlp.confmat(trainInputs, trainTargets);
 
     mlp.earlystopping(trainInputs, trainTargets, trainInputs, trainTargets, learningRateETA, 100);
     mlp.confmat(trainInputs, trainTargets);
