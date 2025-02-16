@@ -43,6 +43,7 @@ class mlp:
         new_val_error = 100000
         
         count = 0
+        totalIterations = 0
         while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1)>0.001)):
             count+=1
             print(count)
@@ -51,14 +52,16 @@ class mlp:
             old_val_error1 = new_val_error
             validout = self.mlpfwd(valid)
             new_val_error = 0.5*np.sum((validtargets-validout)**2)
+            totalIterations += niterations
             
-        print("Stopped", new_val_error,old_val_error1, old_val_error2)
+        print("Stopped", totalIterations, new_val_error,old_val_error1, old_val_error2)
         return new_val_error
     	
     def mlptrain(self,inputs,targets,eta,niterations):
         """ Train the thing """    
         # Add the inputs that match the bias node
         inputs = np.concatenate((inputs,-np.ones((self.ndata,1))),axis=1)
+
         change = range(self.ndata)
     
         updatew1 = np.zeros((np.shape(self.weights1)))

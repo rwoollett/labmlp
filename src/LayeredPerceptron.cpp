@@ -107,7 +107,7 @@ namespace ML
     {
       for (int nData = 0; nData < m_nData; nData++)
       {
-        mlpfwd(inputsWithBiasEntry, trainTargets, nData);
+        mlpfwd(inputsWithBiasEntry, nData);
         mlpback(inputsWithBiasEntry, trainTargets, nData, eta);
       }
 
@@ -143,7 +143,7 @@ namespace ML
     }
   }
 
-  void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, const MatrixXd &targets, int nData)
+  void LayeredPerceptron::mlpfwd(const MatrixXd &inputs, int nData)
   {
     // arg inputs should be passed in with bias entry added
     // Go forward through hidden layer and output layer
@@ -177,20 +177,27 @@ namespace ML
 
   void LayeredPerceptron::confmat(const MatrixXd &inputs, const MatrixXd &targets)
   {
-    ArrayXXd a(m_nData, m_nOut);
-    ArrayXXd b(m_nData, m_nOut);
-    MatrixXd biasInput(m_nData, 1);
-    MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
+    
+    int nInputData = inputs.innerSize();
+    ArrayXXd a(nInputData, m_nOut);
+    ArrayXXd b(nInputData, m_nOut);
+    MatrixXd biasInput(nInputData, 1);
+    MatrixXd inputsWithBiasEntry(nInputData, m_nIn + 1);
     MatrixXd trainTargets = targets;
     a.fill(1.0);
     b.fill(0);
     biasInput.fill(-1.0);
-    inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
-    inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
+    inputsWithBiasEntry.block(0, 0, nInputData, m_nIn) << inputs;
+    inputsWithBiasEntry.col(m_nIn).tail(nInputData) << biasInput;
 
-    for (int nData = 0; nData < m_nData; nData++)
+    m_hiddenLayer = MatrixXd(nInputData, m_nHidden + 1);
+    m_hiddenLayer.block(0, 0, nInputData, m_nHidden).fill(0);
+    m_outputs = MatrixXd(nInputData, m_nOut);
+    m_outputs.fill(0);
+
+    for (int nData = 0; nData < nInputData; nData++)
     {
-      mlpfwd(inputsWithBiasEntry, trainTargets, nData);
+      mlpfwd(inputsWithBiasEntry, nData);
     }
 
     std::cout << "Outputs" << std::endl;
@@ -206,23 +213,23 @@ namespace ML
     {
       // 1-of-N enoding
       D(std::cout << "network size: no. of classes " << nClasses << std::endl
-                  << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;)
+                  << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << nInputData << std::endl;)
       D(std::cout << "Outputs before indicemax: " << std::endl
                   << m_outputs << std::endl;)
       D(std::cout << "Targets before IndiceMax: " << std::endl
                   << trainTargets << std::endl;)
 
-      m_outputs = indiceMax(m_outputs, m_nData, m_nOut);
-      trainTargets = indiceMax(trainTargets, m_nData, m_nOut);
+      m_outputs = indiceMax(m_outputs, nInputData, m_nOut);
+      trainTargets = indiceMax(trainTargets, nInputData, m_nOut);
 
       D(std::cout << "Outputs As IndiceMax: " << std::endl
                   << m_outputs << std::endl;)
       D(std::cout << "Targets As IndiceMax: " << std::endl
                   << trainTargets << std::endl;)
 
-      a = ArrayXXd(m_nData, 1);
+      a = ArrayXXd(nInputData, 1);
       a.fill(1.0);
-      b = ArrayXXd(m_nData, 1);
+      b = ArrayXXd(nInputData, 1);
       b.fill(0);
     }
 
