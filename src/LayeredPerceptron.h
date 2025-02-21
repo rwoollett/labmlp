@@ -15,6 +15,9 @@ using namespace Eigen;
 namespace ML
 {
 
+  void shuffleSet(MatrixXd &inputs, MatrixXd &targets, int nData);
+  void shuffleSet(MatrixXd &inputs, int nData);
+
   class LayeredPerceptron
   {
     int m_nIn;
@@ -38,9 +41,9 @@ namespace ML
 
     void mlptrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations);
 
-    void earlystopping(const MatrixXd &inputs, const MatrixXd &targets,
-                       const MatrixXd &valid, const MatrixXd &validtargets,
-                       double eta, int nIterations)
+    double earlystopping(const MatrixXd &inputs, const MatrixXd &targets,
+                         const MatrixXd &valid, const MatrixXd &validtargets,
+                         double eta, int nIterations)
     {
       int nValidData = valid.innerSize();
       MatrixXd biasInput(nValidData, 1);
@@ -64,9 +67,9 @@ namespace ML
         m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
         m_outputs = MatrixXd(m_nData, m_nOut);
         m_outputs.fill(0);
- 
+
         mlptrain(inputs, targets, eta, nIterations);
- 
+
         old_val_error2 = old_val_error1;
         old_val_error1 = new_val_error;
 
@@ -83,13 +86,13 @@ namespace ML
         findError << (validtargets - m_outputs).eval();
         findError = (findError.array().pow(2.0)).eval();
         new_val_error = 0.5 * findError.array().sum();
-  
+
         totalIterations += nIterations;
       }
 
-      std::cout << "Stopped" << std::endl << totalIterations << " " << new_val_error << " " << old_val_error1 << " " << old_val_error2 << std::endl;
-      //return new_val_error
-
+      std::cout << "Stopped" << std::endl
+                << totalIterations << " " << new_val_error << " " << old_val_error1 << " " << old_val_error2 << std::endl;
+      return new_val_error;
     }
 
     void mlpfwd(const MatrixXd &inputs, int nData);
@@ -121,6 +124,29 @@ namespace ML
     void confmat(const MatrixXd &inputs, const MatrixXd &targets);
 
     ArrayXd indiceMax(const MatrixXd &matrix, int nData, int recordLength);
+
+    // void shuffleSet(MatrixXd &inputs, MatrixXd &targets)
+    // {
+    //   // Shuffle inputs and target to same place
+    //   auto shuffle = [](int size)
+    //   {
+    //     std::vector<int> shuffled(size);
+    //     std::iota(shuffled.begin(), shuffled.end(), 0);
+    //     std::random_shuffle(shuffled.begin(), shuffled.end());
+    //     return shuffled;
+    //   };
+
+    //   int countIndex = 0;
+    //   MatrixXd tmpInputs = inputs;
+    //   MatrixXd tmpTargets = targets;
+    //   std::vector<int> shuffleIndex = shuffle(m_nData);
+    //   for (int i = 0; i < shuffleIndex.size(); i++)
+    //   {
+    //     inputs.row(countIndex) = tmpInputs.row(shuffleIndex[i]);
+    //     targets.row(countIndex) = tmpTargets.row(shuffleIndex[i]);
+    //     countIndex++;
+    //   }
+    // }
   };
 
 }

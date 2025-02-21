@@ -12,11 +12,16 @@ using namespace Eigen;
 
 namespace ML::DataSet
 {
+  enum class NormalizationType
+  {
+    VARIANCE,
+    MAXIMUM
+  };
 
-  //void trainPima();
-  
+  void trainIrisMLP();
+
   void testTrainNClasses();
-  
+
   void trainOr();
 
   void trainXOr();
@@ -35,7 +40,7 @@ namespace ML::DataSet
 
   std::tuple<int, int> readDataShapeFromFile(std::string fileName);
 
-  MatrixXd standardizeColumn(const MatrixXd &col, int nData);
+  MatrixXd standardizeColumn(const MatrixXd &col, int nData, NormalizationType normType);
 
   MatrixXd cleanSparseRecords(const MatrixXd &dataSet, int amountN, int leftCols);
 

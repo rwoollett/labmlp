@@ -68,11 +68,10 @@ namespace ML
     m_updatew2 = MatrixXd(m_nHidden + 1, m_nOut);
     m_updatew2.setZero();
 
-    std::cout << "random weights1 in network initialized: " << std::endl
-              << m_weights1 << std::endl;
-    std::cout << "random weights2 in network initialized: " << std::endl
-              << m_weights2 << std::endl;
-    std::cout << "====" << std::endl;
+    D(std::cout << "train inputs: " << std::endl
+                << inputs(seqN(0, 5), all) << std::endl;)
+    D(std::cout << "train targets " << std::endl
+                << targets(seqN(0, 5), all) << std::endl;)
   }
 
   void LayeredPerceptron::mlptrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations)
@@ -91,12 +90,11 @@ namespace ML
 
     MatrixXd trainTargets = targets;
 
-    D(std::cout << "train inputs: " << std::endl
-                << inputs << std::endl;)
-    D(std::cout << "train inputs with bias: " << std::endl
-                << inputsWithBiasEntry << std::endl;)
-    D(std::cout << "train targets " << std::endl
-                << trainTargets << std::endl;)
+    std::cout << "random weights1 in network initialized: " << std::endl
+              << m_weights1(seqN(0, 5), all) << std::endl;
+    std::cout << "random weights2 in network initialized: " << std::endl
+              << m_weights2(seqN(0, 5), all) << std::endl;
+    std::cout << "====" << std::endl;
 
     m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
     m_updatew1.setZero();
@@ -122,24 +120,7 @@ namespace ML
       }
 
       // Shuffle inputs and target to same place
-      auto shuffle = [](int size)
-      {
-        std::vector<int> shuffled(size);
-        std::iota(shuffled.begin(), shuffled.end(), 0);
-        std::random_shuffle(shuffled.begin(), shuffled.end());
-        return shuffled;
-      };
-
-      int countIndex = 0;
-      MatrixXd tmpInputs = inputsWithBiasEntry;
-      MatrixXd tmpTargets = trainTargets;
-      std::vector<int> shuffleIndex = shuffle(m_nData);
-      for (int i = 0; i < shuffleIndex.size(); i++)
-      {
-        inputsWithBiasEntry.row(countIndex) = tmpInputs.row(shuffleIndex[i]);
-        trainTargets.row(countIndex) = tmpTargets.row(shuffleIndex[i]);
-        countIndex++;
-      }
+      shuffleSet(inputsWithBiasEntry, trainTargets, m_nData);
     }
   }
 
@@ -177,7 +158,7 @@ namespace ML
 
   void LayeredPerceptron::confmat(const MatrixXd &inputs, const MatrixXd &targets)
   {
-    
+
     int nInputData = inputs.innerSize();
     ArrayXXd a(nInputData, m_nOut);
     ArrayXXd b(nInputData, m_nOut);
@@ -200,8 +181,8 @@ namespace ML
       mlpfwd(inputsWithBiasEntry, nData);
     }
 
-    std::cout << "Outputs" << std::endl;
-    std::cout << m_outputs << std::endl;
+    D(std::cout << "Outputs" << std::endl;)
+    D(std::cout << m_outputs(seqN(0, 5), all) << std::endl;)
 
     int nClasses = trainTargets.outerSize();
     if (nClasses == 1)
@@ -293,4 +274,50 @@ namespace ML
     }
     return indices;
   }
+
+  void shuffleSet(MatrixXd &inputs, MatrixXd &targets, int nData)
+  {
+    // Shuffle inputs and target to same place
+    auto shuffle = [](int size)
+    {
+      std::vector<int> shuffled(size);
+      std::iota(shuffled.begin(), shuffled.end(), 0);
+      std::random_shuffle(shuffled.begin(), shuffled.end());
+      return shuffled;
+    };
+
+    int countIndex = 0;
+    MatrixXd tmpInputs = inputs;
+    MatrixXd tmpTargets = targets;
+    std::vector<int> shuffleIndex = shuffle(nData);
+    for (int i = 0; i < shuffleIndex.size(); i++)
+    {
+      inputs.row(countIndex) = tmpInputs.row(shuffleIndex[i]);
+      targets.row(countIndex) = tmpTargets.row(shuffleIndex[i]);
+      countIndex++;
+    }
+  }
+
+  void shuffleSet(MatrixXd &inputs, int nData)
+  {
+    // Shuffle inputs and target to same place
+    auto shuffle = [](int size)
+    {
+      std::vector<int> shuffled(size);
+      std::iota(shuffled.begin(), shuffled.end(), 0);
+      std::random_shuffle(shuffled.begin(), shuffled.end());
+      return shuffled;
+    };
+
+    int countIndex = 0;
+    MatrixXd tmpInputs = inputs;
+    std::vector<int> shuffleIndex = shuffle(nData);
+    for (int i = 0; i < shuffleIndex.size(); i++)
+    {
+      inputs.row(countIndex) = tmpInputs.row(shuffleIndex[i]);
+      countIndex++;
+    }
+  }
+
+
 }

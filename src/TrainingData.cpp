@@ -7,6 +7,92 @@ using namespace io_utility;
 namespace ML::DataSet
 {
 
+  void trainIrisMLP()
+  {
+    // The iris datafile
+    //
+    MatrixXd dataSet;
+    std::vector<int> takeCols{0, 1, 2, 3, 4}; // 0-index of cols to read from file.
+
+    try
+    {
+      dataSet = readDataFile("../dataset/iris_proc.data", takeCols);
+    }
+    catch (std::string e)
+    {
+      std::cout << "trainPima error: " << e << std::endl;
+      return;
+    }
+
+    std::cout << dataSet.innerSize() << " " << dataSet.outerSize() << std::endl;
+    int amountN = dataSet.innerSize();
+
+    // Preprocessing steps
+
+    // Some records in data set have 0 (all missed entries).
+    // These records can be removed.
+    // dataSet = cleanSparseRecords(dataSet, amountN, noleftColsToClasses);
+    std::cout << dataSet.innerSize() << " " << dataSet.outerSize() << std::endl;
+    amountN = dataSet.innerSize();
+
+
+    // Create a new matrix with the appropriate size   // Amount of encoded cells
+    D(std::cout << dataSet.cols() << std::endl;)
+    int newDataSetCols = dataSet.cols();
+
+    MatrixXd newDataSet(amountN, newDataSetCols);
+    newDataSet << dataSet;
+
+    // Do standardise on data
+    MatrixXd trainToStandardize = newDataSet;
+    // define standardize col - all except the classes in last cell
+    MatrixXd result;
+    for (int i = 0; i < newDataSetCols - 1; i++)
+    {
+      MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN, NormalizationType::MAXIMUM);
+      trainToStandardize.col(i) = result;
+    }
+
+    D(std::cout << "trainToStandardize done" << std::endl;)
+    D(std::cout << trainToStandardize(seqN(0, 5), all) << std::endl;)
+
+    dataSet = trainToStandardize;
+
+    shuffleSet(dataSet, amountN);
+    D(std::cout << "trainToStandardize done" << std::endl;)
+    D(std::cout << dataSet(seqN(0, 5), all) << std::endl;)
+
+
+    MatrixXd trainTargets = dataSet(seqN(1, amountN / 2, 2), last);
+    MatrixXd tmpTargets = dataSet(seqN(0, amountN / 2, 2), last);
+
+    MatrixXd trainInputs = dataSet(seqN(1, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
+    MatrixXd tmpInputs = dataSet(seqN(0, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
+
+    int tmpAmountN = amountN / 2;
+    MatrixXd testInputs = tmpInputs(seqN(1, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
+    MatrixXd validInputs = tmpInputs(seqN(0, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
+    MatrixXd testTargets = tmpTargets(seqN(1, tmpAmountN / 2, 2), last);
+    MatrixXd validTargets = tmpTargets(seqN(0, tmpAmountN / 2, 2), last);
+
+    std::cout << "Training set: " << trainInputs.innerSize() << " Training target: " << trainTargets.innerSize() << std::endl;
+    std::cout << "Testing set: " << testInputs.innerSize() << "  Testing target: " << testTargets.innerSize() << std::endl;
+    std::cout << "Valid set: " << validInputs.innerSize() << " Valid target: " << validTargets.innerSize() << std::endl;
+    std::cout << "Training set: " << trainInputs.outerSize() << " Training target: " << trainTargets.outerSize() << std::endl;
+    std::cout << "Testing set: " << testInputs.outerSize() << "  Testing target: " << testTargets.outerSize() << std::endl;
+    std::cout << "Valid set: " << validInputs.outerSize() << " Valid target: " << validTargets.outerSize() << std::endl;
+
+    int nHidden = 5;
+    int nIterations = 101;
+    double learningRateETA = 0.1;
+
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
+    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+    mlp.earlystopping(trainInputs, trainTargets, validInputs, validTargets, learningRateETA, nIterations);
+
+    mlp.confmat(testInputs, testTargets);
+  }
+
   void trainPimaSeq()
   {
     // The pima datafile into the data for pcn
@@ -253,7 +339,7 @@ namespace ML::DataSet
     MatrixXd result;
     for (int i = 0; i < newDataSetCols - 1; i++)
     {
-      MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN);
+      MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN, NormalizationType::VARIANCE);
       trainToStandardize.col(i) = result;
     }
 
@@ -262,14 +348,36 @@ namespace ML::DataSet
     dataSet = trainToStandardize;
 
     MatrixXd trainTargets = dataSet(seqN(1, amountN / 2, 2), last);
-    MatrixXd testTargets = dataSet(seqN(0, amountN / 2, 2), last);
+    MatrixXd tmpTargets = dataSet(seqN(0, amountN / 2, 2), last);
 
     MatrixXd trainInputs = dataSet(seqN(1, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
-    MatrixXd testInputs = dataSet(seqN(0, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
+    MatrixXd tmpInputs = dataSet(seqN(0, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
 
-    Seq::Perceptron pcn(trainInputs, trainTargets);
-    pcn.pcntrain(trainInputs, trainTargets, learningRateETA, noIterations);
-    pcn.confmat(testInputs, testTargets);
+    int tmpAmountN = amountN / 2;
+    MatrixXd testInputs = tmpInputs(seqN(1, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
+    MatrixXd validInputs = tmpInputs(seqN(0, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
+    MatrixXd testTargets = tmpTargets(seqN(1, tmpAmountN / 2, 2), last);
+    MatrixXd validTargets = tmpTargets(seqN(0, tmpAmountN / 2, 2), last);
+
+    // Seq::Perceptron pcn(trainInputs, trainTargets);
+    // pcn.pcntrain(trainInputs, trainTargets, learningRateETA, noIterations);
+    // pcn.confmat(testInputs, testTargets);
+
+    std::cout << "Training set: " << trainInputs.innerSize() << " Training target: " << trainTargets.innerSize() << std::endl;
+    std::cout << "Testing set: " << testInputs.innerSize() << "  Testing target: " << testTargets.innerSize() << std::endl;
+    std::cout << "Valid set: " << validInputs.innerSize() << " Valid target: " << validTargets.innerSize() << std::endl;
+    std::cout << "Training set: " << trainInputs.outerSize() << " Training target: " << trainTargets.outerSize() << std::endl;
+    std::cout << "Testing set: " << testInputs.outerSize() << "  Testing target: " << testTargets.outerSize() << std::endl;
+    std::cout << "Valid set: " << validInputs.outerSize() << " Valid target: " << validTargets.outerSize() << std::endl;
+
+    int nHidden = 2;
+    int nIterations = 51;
+
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
+    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+    mlp.earlystopping(trainInputs, trainTargets, validInputs, validTargets, learningRateETA, nIterations);
+
+    mlp.confmat(testInputs, testTargets);
   }
 
   void testTrainNClasses()
@@ -319,7 +427,6 @@ namespace ML::DataSet
     mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
 
     mlp.confmat(trainInputs, trainTargets);
-
   }
 
   void trainOr()
@@ -368,8 +475,8 @@ namespace ML::DataSet
     trainTargets << 0.0, 1.0, 1.0, 0.0;
 
     LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
-   // mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
-   // mlp.confmat(trainInputs, trainTargets);
+    // mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+    // mlp.confmat(trainInputs, trainTargets);
 
     mlp.earlystopping(trainInputs, trainTargets, trainInputs, trainTargets, learningRateETA, 100);
     mlp.confmat(trainInputs, trainTargets);
@@ -499,16 +606,19 @@ namespace ML::DataSet
     return {countSet, inputCount};
   }
 
-  MatrixXd standardizeColumn(const MatrixXd &col, int nData)
+  MatrixXd standardizeColumn(const MatrixXd &col, int nData, NormalizationType normType)
   {
     MatrixXd workCol(nData, 1);
     MatrixXd meanV(nData, 1);
     MatrixXd tosqrtd(nData, 1);
     MatrixXd sqrtd(nData, 1);
-    MatrixXd toDivVar(nData, 1);
+    MatrixXd normalize(nData, 1);
 
     workCol << col;
 
+    D(std::cout << "workcol" << std::endl;)
+    D(std::cout << workCol(seqN(0, 5), all) << std::endl;)
+    // Col minus mean of nData columns
     double colMean = workCol.mean();
     double sumCol = workCol.sum();
     meanV.fill(colMean);
@@ -517,18 +627,49 @@ namespace ML::DataSet
     // Later the workCol is divided the variance.
     // col = col - mean
     workCol -= meanV;
+    D(std::cout << "workcol - mean" << std::endl;)
+    D(std::cout << workCol(seqN(0, 5), all) << std::endl;)
 
-    tosqrtd << workCol;
-    sqrtd = tosqrtd.array().square();
-    double sumSquares = sqrtd.sum();
-    double variance = sumSquares / (nData - 1);
-    D(std::cout << "sumSquares:         " << sumSquares << std::endl;)
-    D(std::cout << "variance of col(0): " << variance << std::endl;)
+    // Col() now had mean minus :
+    // Can normalize either by variance or the maximum
+    switch (normType)
+    {
+    case NormalizationType::VARIANCE:
+    {
+      tosqrtd << workCol;
+      sqrtd = tosqrtd.array().square();
+      double sumSquares = sqrtd.sum();
+      double variance = sumSquares / (nData - 1);
+      D(std::cout << "sumSquares:         " << sumSquares << std::endl;)
+      D(std::cout << "variance of col(0): " << variance << std::endl;)
+      // Workcol has minus mean now divid variance calculated.
+      // col = (col - mean)/variance
+      normalize = workCol / variance;
 
-    // Workcol has minus mean now divid variance calculated.
-    // col = (col - mean)/variance
-    toDivVar = workCol / variance;
-    return toDivVar;
+      D(std::cout << "normalize with variance" << std::endl;)
+      D(std::cout << normalize(seqN(0, 5), all) << std::endl;)
+
+      break;
+    }
+    case NormalizationType::MAXIMUM:
+    {
+      auto max = workCol.maxCoeff();
+      auto min = workCol.minCoeff();
+      auto imax = std::max(max, std::abs(min));
+
+      D(std::cout << "max:" << max << " min" << min << std::endl;)
+      // 2) div workCols / imax to normalize
+      normalize = workCol / imax;
+      D(std::cout << "normalize with max" << std::endl;)
+      D(std::cout << normalize(seqN(0, 5), all) << std::endl;)
+      break;
+    }
+    default:
+      // shound get here;
+      break;
+    }
+
+    return normalize;
   }
 
   MatrixXd cleanSparseRecords(const MatrixXd &dataSet, int amountN, int leftCols)
