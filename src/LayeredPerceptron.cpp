@@ -13,7 +13,7 @@ namespace ML
     std::seed_seq seed_seq{static_cast<long unsigned int>(time(0))};
     std::default_random_engine random_engine{seed_seq};
     std::uniform_real_distribution<double> uidfRandom{-1, 0.99999};
-
+    
     // Set up network size
     int nIn = 1;
     int nOut = 1;
@@ -21,24 +21,24 @@ namespace ML
     {
       m_nIn = inputs.outerSize();
     }
-
+    
     if (targets.NumDimensions > 1)
     {
       m_nOut = targets.outerSize();
     }
-
+    
     m_nData = inputs.innerSize();
-
+    
     std::cout << "network size " << std::endl
-              << " nIn: " << m_nIn << ", nHidden:" << m_nHidden << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
-
+    << " nIn: " << m_nIn << ", nHidden:" << m_nHidden << ", nOut:" << m_nOut << ", nData: " << m_nData << std::endl;
+    
     // # Initialise network
     m_hiddenLayer = MatrixXd(m_nData, m_nHidden + 1);
     m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
-
+    
     m_outputs = MatrixXd(m_nData, m_nOut);
     m_outputs.fill(0);
-
+    
     MatrixXd randmat1 = MatrixXd(m_nIn + 1, m_nHidden);
     MatrixXd randmat2 = MatrixXd(m_nHidden + 1, m_nOut);
     for (int i = 0; i < (m_nIn + 1); i++)
@@ -76,25 +76,18 @@ namespace ML
 
   void LayeredPerceptron::mlptrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations)
   {
+    MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
     MatrixXd biasInput(m_nData, 1);
+    MatrixXd trainTargets = targets;
     biasInput.fill(-1.0);
 
     // Add bias entry to inputs
-    MatrixXd inputsWithBiasEntry(m_nData, m_nIn + 1);
     inputsWithBiasEntry.block(0, 0, m_nData, m_nIn) << inputs;
     inputsWithBiasEntry.col(m_nIn).tail(m_nData) << biasInput;
 
     m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
     m_hiddenLayer.col(m_nHidden).tail(m_nData) << biasInput;
     m_outputs.fill(0);
-
-    MatrixXd trainTargets = targets;
-
-    std::cout << "random weights1 in network initialized: " << std::endl
-              << m_weights1(seqN(0, 5), all) << std::endl;
-    std::cout << "random weights2 in network initialized: " << std::endl
-              << m_weights2(seqN(0, 5), all) << std::endl;
-    std::cout << "====" << std::endl;
 
     m_updatew1 = MatrixXd(m_nIn + 1, m_nHidden);
     m_updatew1.setZero();
@@ -103,13 +96,14 @@ namespace ML
 
     for (int iteration = 0; iteration < nIterations; iteration++)
     {
+      MatrixXd findError(m_nData, m_nOut);
+
       for (int nData = 0; nData < m_nData; nData++)
       {
         mlpfwd(inputsWithBiasEntry, nData);
         mlpback(inputsWithBiasEntry, trainTargets, nData, eta);
       }
 
-      MatrixXd findError(m_nData, m_nOut);
       findError << (m_outputs - trainTargets).eval();
       findError = (findError.array().pow(2.0)).eval();
       double error = 0.5 * findError.array().sum();
@@ -181,9 +175,6 @@ namespace ML
       mlpfwd(inputsWithBiasEntry, nData);
     }
 
-    D(std::cout << "Outputs" << std::endl;)
-    D(std::cout << m_outputs(seqN(0, 5), all) << std::endl;)
-
     int nClasses = trainTargets.outerSize();
     if (nClasses == 1)
     {
@@ -195,22 +186,17 @@ namespace ML
       // 1-of-N enoding
       D(std::cout << "network size: no. of classes " << nClasses << std::endl
                   << " nIn: " << m_nIn << ", nOut:" << m_nOut << ", nData: " << nInputData << std::endl;)
-      D(std::cout << "Outputs before indicemax: " << std::endl
-                  << m_outputs << std::endl;)
-      D(std::cout << "Targets before IndiceMax: " << std::endl
-                  << trainTargets << std::endl;)
-
       m_outputs = indiceMax(m_outputs, nInputData, m_nOut);
       trainTargets = indiceMax(trainTargets, nInputData, m_nOut);
 
       D(std::cout << "Outputs As IndiceMax: " << std::endl
-                  << m_outputs << std::endl;)
+                  << (nInputData < 100 ? nInputData : 100) << ": " << m_outputs(seqN(0, nInputData < 100 ? nInputData : 100), all).transpose() << std::endl;)
       D(std::cout << "Targets As IndiceMax: " << std::endl
-                  << trainTargets << std::endl;)
+                  << (nInputData < 100 ? nInputData : 100) << ": " << trainTargets(seqN(0, nInputData < 100 ? nInputData : 100), all).transpose() << std::endl;)
 
       a = ArrayXXd(nInputData, 1);
-      a.fill(1.0);
       b = ArrayXXd(nInputData, 1);
+      a.fill(1.0);
       b.fill(0);
     }
 
@@ -318,6 +304,5 @@ namespace ML
       countIndex++;
     }
   }
-
 
 }

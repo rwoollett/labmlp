@@ -13,7 +13,6 @@ namespace ML::DataSet
     //
     MatrixXd dataSet;
     std::vector<int> takeCols{0, 1, 2, 3, 4}; // 0-index of cols to read from file.
-
     try
     {
       dataSet = readDataFile("../dataset/iris_proc.data", takeCols);
@@ -26,45 +25,52 @@ namespace ML::DataSet
 
     std::cout << dataSet.innerSize() << " " << dataSet.outerSize() << std::endl;
     int amountN = dataSet.innerSize();
+    int nDataSetCols = dataSet.cols();
 
     // Preprocessing steps
-
-    // Some records in data set have 0 (all missed entries).
-    // These records can be removed.
-    // dataSet = cleanSparseRecords(dataSet, amountN, noleftColsToClasses);
-    std::cout << dataSet.innerSize() << " " << dataSet.outerSize() << std::endl;
-    amountN = dataSet.innerSize();
-
-
-    // Create a new matrix with the appropriate size   // Amount of encoded cells
-    D(std::cout << dataSet.cols() << std::endl;)
-    int newDataSetCols = dataSet.cols();
-
-    MatrixXd newDataSet(amountN, newDataSetCols);
-    newDataSet << dataSet;
-
     // Do standardise on data
-    MatrixXd trainToStandardize = newDataSet;
+    MatrixXd trainToStandardize = dataSet;
     // define standardize col - all except the classes in last cell
     MatrixXd result;
-    for (int i = 0; i < newDataSetCols - 1; i++)
+    for (int i = 0; i < nDataSetCols - 1; i++)
     {
       MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN, NormalizationType::MAXIMUM);
       trainToStandardize.col(i) = result;
     }
 
-    D(std::cout << "trainToStandardize done" << std::endl;)
+    D(std::cout << "training set before normal standardization" << std::endl;)
+    D(std::cout << dataSet(seqN(0, 5), all) << std::endl;)
+    D(std::cout << "training set with mornal standardization" << std::endl;)
     D(std::cout << trainToStandardize(seqN(0, 5), all) << std::endl;)
 
     dataSet = trainToStandardize;
 
-    shuffleSet(dataSet, amountN);
-    D(std::cout << "trainToStandardize done" << std::endl;)
-    D(std::cout << dataSet(seqN(0, 5), all) << std::endl;)
+    // Add encoded targets to dataset
+    MatrixXd targetsToEncode = dataSet.col(nDataSetCols - 1);
+    MatrixXd targetEncoded(amountN, 3);
+    targetEncoded.setZero();
+    for (int i = 0; i < amountN; i++)
+    {
+      int irisClass = static_cast<int>(targetsToEncode(i, 0));
+      if (irisClass == 0)
+      {
+        targetEncoded(i, 0) = 1;
+      }
+      else if (irisClass == 1)
+      {
+        targetEncoded(i, 1) = 1;
+      }
+      else if (irisClass == 2)
+      {
+        targetEncoded(i, 2) = 1;
+      }
+    }
+
+    shuffleSet(dataSet, targetEncoded, amountN);
 
 
-    MatrixXd trainTargets = dataSet(seqN(1, amountN / 2, 2), last);
-    MatrixXd tmpTargets = dataSet(seqN(0, amountN / 2, 2), last);
+    MatrixXd trainTargets = targetEncoded(seqN(1, amountN / 2, 2), all);
+    MatrixXd tmpTargets = targetEncoded(seqN(0, amountN / 2, 2), all);
 
     MatrixXd trainInputs = dataSet(seqN(1, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
     MatrixXd tmpInputs = dataSet(seqN(0, amountN / 2, 2), seqN(0, dataSet.outerSize() - 1));
@@ -72,8 +78,8 @@ namespace ML::DataSet
     int tmpAmountN = amountN / 2;
     MatrixXd testInputs = tmpInputs(seqN(1, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
     MatrixXd validInputs = tmpInputs(seqN(0, tmpAmountN / 2, 2), seqN(0, tmpInputs.outerSize()));
-    MatrixXd testTargets = tmpTargets(seqN(1, tmpAmountN / 2, 2), last);
-    MatrixXd validTargets = tmpTargets(seqN(0, tmpAmountN / 2, 2), last);
+    MatrixXd testTargets = tmpTargets(seqN(1, tmpAmountN / 2, 2), all);
+    MatrixXd validTargets = tmpTargets(seqN(0, tmpAmountN / 2, 2), all);
 
     std::cout << "Training set: " << trainInputs.innerSize() << " Training target: " << trainTargets.innerSize() << std::endl;
     std::cout << "Testing set: " << testInputs.innerSize() << "  Testing target: " << testTargets.innerSize() << std::endl;
@@ -82,7 +88,7 @@ namespace ML::DataSet
     std::cout << "Testing set: " << testInputs.outerSize() << "  Testing target: " << testTargets.outerSize() << std::endl;
     std::cout << "Valid set: " << validInputs.outerSize() << " Valid target: " << validTargets.outerSize() << std::endl;
 
-    int nHidden = 5;
+    int nHidden = 2;
     int nIterations = 101;
     double learningRateETA = 0.1;
 
