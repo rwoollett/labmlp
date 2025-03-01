@@ -13,6 +13,17 @@ int main(int argc, char *argv[])
 
   //  Comment out training data functions as require.
   trainIrisMLP();
+
+  // MatrixXd nIterCheck(10,1);
+  // nIterCheck << 606, 500, 1010, 1001, 1200, 505, 404, 300, 506, 780;
+  // double result = varianceColumn(nIterCheck.col(0), 10);
+
+  // MatrixXd normalize = nIterCheck.col(0) / result;
+  // std::cout << "test result " << result << std::endl;
+  // std::cout << "test result " << std::sqrt(result) << std::endl;
+  // std::cout << "test mtrix using varianve norma " << normalize << std::endl;
+
+
   //trainPimaSeq();
   // trainXOr();
   //testTrainNClasses();

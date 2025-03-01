@@ -7,7 +7,7 @@
 namespace ML
 {
   LayeredPerceptron::LayeredPerceptron(const MatrixXd &inputs, const MatrixXd &targets, int nhidden)
-      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{1.0}, m_momentum{0.9}
+      : m_nIn{1}, m_nOut{1}, m_nData{0}, m_nHidden{nhidden}, m_beta{1.0}, m_momentum{0.9}, m_trainVerbose{true}
   {
 
     std::seed_seq seed_seq{static_cast<long unsigned int>(time(0))};
@@ -108,7 +108,7 @@ namespace ML
       findError = (findError.array().pow(2.0)).eval();
       double error = 0.5 * findError.array().sum();
 
-      if (iteration % 100 == 0)
+      if (iteration % 100 == 0 && m_trainVerbose == true)
       {
         std::cout << "At Iteration: " << iteration << " Error: " << error << std::endl;
       }
@@ -150,7 +150,7 @@ namespace ML
     }
   }
 
-  void LayeredPerceptron::confmat(const MatrixXd &inputs, const MatrixXd &targets)
+  double LayeredPerceptron::confmat(const MatrixXd &inputs, const MatrixXd &targets)
   {
 
     int nInputData = inputs.innerSize();
@@ -213,14 +213,18 @@ namespace ML
     std::cout << "Confusion Matrix: " << std::endl
               << cm << std::endl;
     auto sumCM = cm.sum();
+    double percCorrect;
     if (sumCM != 0)
     {
+      percCorrect = cm.trace() / cm.sum();
       std::cout << cm.trace() / cm.sum() << std::endl;
     }
     else
     {
+      percCorrect = cm.trace();
       std::cout << cm.trace() << std::endl;
     }
+    return percCorrect;
   }
 
   ArrayXd LayeredPerceptron::indiceMax(const MatrixXd &matrix, int nData, int recordLength)

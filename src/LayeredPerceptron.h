@@ -34,6 +34,7 @@ namespace ML
     MatrixXd m_updatew1;
     MatrixXd m_updatew2;
     int m_threshold{0};
+    bool m_trainVerbose;
 
   public:
     // weight passed need i0 placement for bias input weights
@@ -41,7 +42,7 @@ namespace ML
 
     void mlptrain(const MatrixXd &inputs, const MatrixXd &targets, double eta, int nIterations);
 
-    double earlystopping(const MatrixXd &inputs, const MatrixXd &targets,
+    std::tuple<double, int> earlystopping(const MatrixXd &inputs, const MatrixXd &targets,
                          const MatrixXd &valid, const MatrixXd &validtargets,
                          double eta, int nIterations)
     {
@@ -60,8 +61,10 @@ namespace ML
 
       int count = 0;
       int totalIterations = 0;
+      m_trainVerbose = false;
 
-      while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1) > 0.001))
+      while ((((old_val_error1 - new_val_error) > 0.001) || ((old_val_error2 - old_val_error1) > 0.001)) &&
+             (totalIterations < 20001))
       {
         m_hiddenLayer = MatrixXd(m_nData, m_nHidden + 1);
         m_hiddenLayer.block(0, 0, m_nData, m_nHidden).fill(0);
@@ -83,7 +86,7 @@ namespace ML
         }
         // new_val_error = 0.5*np.sum((validtargets-m_output)**2);
         MatrixXd findError(nValidData, m_nOut);
-        findError << (validtargets - m_outputs).eval();
+        findError << (m_outputs - validtargets).eval();
         findError = (findError.array().pow(2.0)).eval();
         new_val_error = 0.5 * findError.array().sum();
 
@@ -92,7 +95,7 @@ namespace ML
 
       std::cout << "Stopped" << std::endl
                 << totalIterations << " " << new_val_error << " " << old_val_error1 << " " << old_val_error2 << std::endl;
-      return new_val_error;
+      return {new_val_error, totalIterations};
     }
 
     void mlpfwd(const MatrixXd &inputs, int nData);
@@ -121,7 +124,7 @@ namespace ML
       m_weights2 = (m_weights2 - m_updatew2).eval();
     };
 
-    void confmat(const MatrixXd &inputs, const MatrixXd &targets);
+    double confmat(const MatrixXd &inputs, const MatrixXd &targets);
 
     ArrayXd indiceMax(const MatrixXd &matrix, int nData, int recordLength);
 
