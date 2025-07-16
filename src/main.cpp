@@ -12,7 +12,12 @@ int main(int argc, char *argv[])
 {
 
   //  Comment out training data functions as require.
-  trainIrisMLP();
+  // trainIrisMLP();
+  trainPima();
+
+  // trainXOr();
+  // testTrainNClasses();
+  // trainXOrMLP();
 
   // MatrixXd nIterCheck(10,1);
   // nIterCheck << 606, 500, 1010, 1001, 1200, 505, 404, 300, 506, 780;
@@ -22,13 +27,6 @@ int main(int argc, char *argv[])
   // std::cout << "test result " << result << std::endl;
   // std::cout << "test result " << std::sqrt(result) << std::endl;
   // std::cout << "test mtrix using varianve norma " << normalize << std::endl;
-
-
-  //trainPimaSeq();
-  // trainXOr();
-  //testTrainNClasses();
-//trainXOrMLP();
-
   // Eigen::MatrixXd train(4,5);
   // train << 3,1,-8,0,4,
   // 1,2,8,5,8,
@@ -37,7 +35,6 @@ int main(int argc, char *argv[])
 
   // Eigen::MatrixXd train2(1,5);
   // train2 << 7.9, 4.4, 6.9, 2.5, 2.0;
-
 
   // Eigen::MatrixXd ones(1,5);
   // ones << MatrixXd::Ones(1,5);

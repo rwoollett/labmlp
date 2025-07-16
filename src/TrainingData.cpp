@@ -88,14 +88,14 @@ namespace ML::DataSet
     std::cout << "Testing set: " << testInputs.outerSize() << "  Testing target: " << testTargets.outerSize() << std::endl;
     std::cout << "Valid set: " << validInputs.outerSize() << " Valid target: " << validTargets.outerSize() << std::endl;
 
-    int nHidden = 2;
-    int nIterations = 201;
     double learningRateETA = 0.15;
+    int nIterations = 101;
     const int nHiddenSet = 7;
     const int nSamples = 10;
-    const int nChecks = 4;
+    const int nChecks = 4; // ie mean, variance(std dev squared), max and min..
 
     std::array<int, nHiddenSet> nnodes{1, 2, 3, 5, 10, 25, 50};
+
     MatrixXd errorCheck = MatrixXd::Zero(nSamples, nHiddenSet);
     MatrixXd nIterCheck = MatrixXd::Zero(nSamples, nHiddenSet);
     MatrixXd confmatCheck = MatrixXd::Zero(nSamples, nHiddenSet);
@@ -112,13 +112,6 @@ namespace ML::DataSet
         confmatCheck(j, i) = mlp.confmat(testInputs, testTargets);
       }
     }
-    // std::cout << "errorCheck" << std::endl;
-    // std::cout << errorCheck << std::endl;
-    // std::cout << "nIterCheck" << std::endl;
-    // std::cout << nIterCheck << std::endl;
-    // double result = varianceColumn(nIterCheck.col(0), nSamples);
-    // std::cout << "test result " << result << std::endl;
-
     // Show the tables for summary of 10 training runs for all the samples of different hidden node
     // The Mean error and variance
     // The total iterations of the samples
@@ -140,7 +133,7 @@ namespace ML::DataSet
 
     // table body - need checkHeader and whole matrix of data ie errorCheck or  nIterCheck
 
-    ArrayX<std::string> checkHeader(4);
+    ArrayX<std::string> checkHeader(nChecks);
     checkHeader << "Mean error",
         "Variance",
         "Max",
@@ -164,61 +157,14 @@ namespace ML::DataSet
     std::cout
         << std::setfill('=') << std::setw(15 * (nHiddenSet) + 20) << '=' << std::endl;
 
-    // LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
-    // mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
-    // mlp.confmat(testInputs, testTargets);
+    std::cout << std::setprecision(0);
+    int nHidden = 25;
+    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
+    mlp.earlystopping(trainInputs, trainTargets, validInputs, validTargets, learningRateETA, nIterations);
+    mlp.confmat(testInputs, testTargets);
   }
 
-  void summaryBody(const MatrixXd &data, const ArrayX<std::string> &headers, int nHiddenSet, int nSamples, int nPrecision)
-  {
-    for (int k = 0; k < 4; k++)
-    {
-      std::cout << std::setfill(' ');
-      std::cout << std::setw(20) << std::left << headers[k];
-      std::cout << std::fixed << std::setprecision(nPrecision);
-      for (int i = 0; i < nHiddenSet; i++)
-      {
-        double result = 0.0;
-
-        switch (k)
-        {
-        case 0: // Mean
-        {
-          result = data.col(i).mean();
-        }
-        break;
-        case 1: // Variance
-        {
-
-          result = std::sqrt( varianceColumn(data.col(i), nSamples) ) ; // used sqrt for standard deviation from varianve
-        }
-        break;
-        case 2: // Max
-        {
-
-          result = data.col(i).maxCoeff();
-        }
-        break;
-        case 3: // Max
-        {
-
-          result = data.col(i).minCoeff();
-        }
-        break;
-        default:
-        {
-          break;
-        }
-        }
-
-        std::cout << "|" << std::setw(10) << std::right << result;
-        std::cout << std::setw(4) << std::left << " ";
-      }
-      std::cout << std::endl;
-    }
-  };
-
-  void trainPimaSeq()
+  void trainPima()
   {
     // The pima datafile into the data for pcn
     //           -  3 is: 4. Triceps skin fold thickness (mm)                * not much improvement with this
@@ -242,7 +188,7 @@ namespace ML::DataSet
     int encodePedigree = 4;
     int encodeAgeCol = 5;
 
-    int noleftColsToClasses = 6; // Before the encoded cols are merged together in final dataset
+    // int noleftColsToClasses = 6; // Before the encoded cols are merged together in final dataset
 
     try
     {
@@ -256,8 +202,6 @@ namespace ML::DataSet
 
     std::cout << dataSet.innerSize() << " " << dataSet.outerSize() << std::endl;
     int amountN = dataSet.innerSize();
-    double learningRateETA = 0.25;
-    int noIterations = 100;
 
     // Preprocessing steps
 
@@ -442,35 +386,44 @@ namespace ML::DataSet
 
     // Create a new matrix with the appropriate size   // Amount of encoded cells
     D(std::cout << dataSet.cols() << std::endl;)
-    int newDataSetCols = dataSet.cols() +
-                         (glucoseEncoded.cols() - 1) +       // 4
-                         (bloodPressureEncoded.cols() - 1) + // 5
-                         (serumEncoded.cols() - 1) +         // 6
-                         (pedigreeEncoded.cols() - 1) +      // 6
-                         (ageEncoded.cols() - 1);            // 5
+    int newDataSetCols = pregnantCapped.cols()     // 1 cols
+                         + (glucoseEncoded.cols()) // 4
+                                                       //  + (bloodPressureEncoded.cols() - 1) // 5
+                                                       //  + (serumEncoded.cols() - 1)         // 6
+                                                       //  + (pedigreeEncoded.cols() - 1)      // 6
+                         + (ageEncoded.cols())     // 5
+                         + 1     // classes (0 or 1)
+        ;
 
     MatrixXd newDataSet(amountN, newDataSetCols);
     newDataSet << pregnantCapped,
         glucoseEncoded,
-        bloodPressureEncoded,
-        serumEncoded,
-        pedigreeEncoded,
+        // bloodPressureEncoded,
+        // serumEncoded,
+        // pedigreeEncoded,
         ageEncoded,
         dataSet.col(6);
 
     // Do standardise on data
-    MatrixXd trainToStandardize = newDataSet;
-    // define standardize col - all except the classes in last cell
-    MatrixXd result;
-    for (int i = 0; i < newDataSetCols - 1; i++)
-    {
-      MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN, NormalizationType::VARIANCE);
-      trainToStandardize.col(i) = result;
-    }
+    // MatrixXd trainToStandardize = newDataSet;
+    // // define standardize col - all except the classes in last cell
+    // MatrixXd result;
+    // for (int i = 0; i < newDataSetCols - 1; i++)
+    // {
+    //   MatrixXd result = standardizeColumn(trainToStandardize.col(i), amountN, NormalizationType::VARIANCE);
+    //   trainToStandardize.col(i) = result;
+    // }
 
-    std::cout << "trainToStandardize done" << std::endl;
-    D(std::cout << trainToStandardize << std::endl;)
-    dataSet = trainToStandardize;
+    // std::cout << "trainToStandardize done" << std::endl;
+    // D(std::cout << trainToStandardize << std::endl;)
+
+    // the normalize is not really needed as all fields are 1ofN ecoded
+    dataSet = newDataSet;
+    std::cout << "dataSet(seqN(0, amountN), last)" << std::endl;
+    std::cout << "class 0 " << (dataSet(seqN(0, amountN), last).array() == 0).count() << std::endl;
+    std::cout << "class 1 " << (dataSet(seqN(0, amountN), last).array() == 1).count() << std::endl;
+
+    // We may create a dataset with only one major class classfied as most data entries have 0 class
 
     MatrixXd trainTargets = dataSet(seqN(1, amountN / 2, 2), last);
     MatrixXd tmpTargets = dataSet(seqN(0, amountN / 2, 2), last);
@@ -484,24 +437,104 @@ namespace ML::DataSet
     MatrixXd testTargets = tmpTargets(seqN(1, tmpAmountN / 2, 2), last);
     MatrixXd validTargets = tmpTargets(seqN(0, tmpAmountN / 2, 2), last);
 
-    // Seq::Perceptron pcn(trainInputs, trainTargets);
-    // pcn.pcntrain(trainInputs, trainTargets, learningRateETA, noIterations);
-    // pcn.confmat(testInputs, testTargets);
-
     std::cout << "Training set: " << trainInputs.innerSize() << " Training target: " << trainTargets.innerSize() << std::endl;
+    std::cout << "trainTargets" << std::endl;
+    std::cout << "class 0 " << (trainTargets.array() == 0).count() << std::endl;
+    std::cout << "class 1 " << (trainTargets.array() == 1).count() << std::endl;
+
     std::cout << "Testing set: " << testInputs.innerSize() << "  Testing target: " << testTargets.innerSize() << std::endl;
+    std::cout << "testTargets" << std::endl;
+    std::cout << "class 0 " << (testTargets.array() == 0).count() << std::endl;
+    std::cout << "class 1 " << (testTargets.array() == 1).count() << std::endl;
+
     std::cout << "Valid set: " << validInputs.innerSize() << " Valid target: " << validTargets.innerSize() << std::endl;
+    std::cout << "validTargets" << std::endl;
+    std::cout << "class 0 " << (validTargets.array() == 0).count() << std::endl;
+    std::cout << "class 1 " << (validTargets.array() == 1).count() << std::endl;
+
     std::cout << "Training set: " << trainInputs.outerSize() << " Training target: " << trainTargets.outerSize() << std::endl;
     std::cout << "Testing set: " << testInputs.outerSize() << "  Testing target: " << testTargets.outerSize() << std::endl;
     std::cout << "Valid set: " << validInputs.outerSize() << " Valid target: " << validTargets.outerSize() << std::endl;
 
-    int nHidden = 2;
-    int nIterations = 51;
+    int nHidden = 10;
+    int nIterations = 201;
+    double learningRateETA = 0.15;
+    bool performErrorCheck = true;
 
-    LayeredPerceptron mlp(trainInputs, trainTargets, nHidden);
-    mlp.mlptrain(trainInputs, trainTargets, learningRateETA, nIterations);
+    // Perform a error summary for the training with different number of hidden nodes
+    if (performErrorCheck)
+    {
+      const int nHiddenSet = 7;
+      const int nSamples = 10;
+      const int nChecks = 4; // ie mean, variance(std dev squared), max and min..
+
+      std::array<int, nHiddenSet> nnodes{1, 2, 3, 5, 10, 25, 50};
+
+      MatrixXd errorCheck = MatrixXd::Zero(nSamples, nHiddenSet);
+      MatrixXd nIterCheck = MatrixXd::Zero(nSamples, nHiddenSet);
+      MatrixXd confmatCheck = MatrixXd::Zero(nSamples, nHiddenSet);
+      for (int i = 0; i < nHiddenSet; i++)
+      {
+        std::cout << " i " << i << ":" << nnodes[i] << " " << errorCheck << std::endl;
+        for (int j = 0; j < nSamples; j++)
+        {
+          LayeredPerceptron mlp(trainInputs, trainTargets, nnodes[i]);
+          auto err = mlp.earlystopping(trainInputs, trainTargets, validInputs, validTargets, learningRateETA, nIterations);
+          errorCheck(j, i) = std::get<0>(err);
+          nIterCheck(j, i) = std::get<1>(err);
+          confmatCheck(j, i) = mlp.confmat(testInputs, testTargets);
+        }
+      }
+      // Show the tables for summary of 10 training runs for all the samples of different hidden node
+      // The Mean error and variance
+      // The total iterations of the samples
+      std::cout << std::endl
+                << " *** Tables for Summary of 10 training runs for all the samples of different hidden node ***" << std::endl;
+
+      // Mean errors
+      std::cout << std::endl
+                << std::setfill('=') << std::setw(15 * (nHiddenSet) + 20) << '=' << std::endl;
+      std::cout << std::setfill(' ');
+      std::cout << std::setw(20) << std::left << "No. hidden nodes";
+      for (int i = 0; i < nHiddenSet; i++)
+      {
+        std::cout << "|" << std::setw(10) << std::left << (std::string("  ") + std::to_string(nnodes[i]));
+        std::cout << std::setw(4) << std::left << " ";
+      }
+      std::cout << std::endl;
+      std::cout << std::setfill('-') << std::setw(15 * (nHiddenSet) + 20) << '-' << std::endl;
+
+      // table body - need checkHeader and whole matrix of data ie errorCheck or  nIterCheck
+
+      ArrayX<std::string> checkHeader(nChecks);
+      checkHeader << "Mean error",
+          "Variance",
+          "Max",
+          "Min";
+      summaryBody(errorCheck, checkHeader, nHiddenSet, nSamples, 6);
+
+      std::cout << std::setfill('-') << std::setw(15 * (nHiddenSet) + 20) << '-' << std::endl;
+      checkHeader << "Mean iteration",
+          "Variance",
+          "Max",
+          "Min";
+      summaryBody(nIterCheck, checkHeader, nHiddenSet, nSamples, 0);
+
+      std::cout << std::setfill('-') << std::setw(15 * (nHiddenSet) + 20) << '-' << std::endl;
+      checkHeader << "Mean cm",
+          "Variance",
+          "Max",
+          "Min";
+      summaryBody(confmatCheck, checkHeader, nHiddenSet, nSamples, 6);
+
+      std::cout
+          << std::setfill('=') << std::setw(15 * (nHiddenSet) + 20) << '=' << std::endl;
+    }
+
+    std::cout << std::defaultfloat;
+
+    LayeredPerceptron mlp(trainInputs, trainTargets, 25);
     mlp.earlystopping(trainInputs, trainTargets, validInputs, validTargets, learningRateETA, nIterations);
-
     mlp.confmat(testInputs, testTargets);
   }
 
@@ -743,10 +776,10 @@ namespace ML::DataSet
 
     meanV.fill(colMean);
     workCol -= meanV;
-    //std::cout << workCol.transpose() << std::endl;
+    // std::cout << workCol.transpose() << std::endl;
     sqrtd = workCol.array().square();
 
-    //std::cout << sqrtd.transpose() << std::endl;
+    // std::cout << sqrtd.transpose() << std::endl;
     double sumSquares = sqrtd.sum();
     double variance = sumSquares / (nData - 1);
     return variance;
@@ -817,6 +850,56 @@ namespace ML::DataSet
 
     return normalize;
   }
+
+  void summaryBody(const MatrixXd &data, const ArrayX<std::string> &headers, int nHiddenSet, int nSamples, int nPrecision)
+  {
+    // Static amount of checks for k - ie mean, varianve, max and min - being 4 atm.
+    for (int k = 0; k < 4; k++)
+    {
+      std::cout << std::setfill(' ');
+      std::cout << std::setw(20) << std::left << headers[k];
+      std::cout << std::fixed << std::setprecision(nPrecision);
+      for (int i = 0; i < nHiddenSet; i++)
+      {
+        double result = 0.0;
+
+        switch (k)
+        {
+        case 0: // Mean
+        {
+          result = data.col(i).mean();
+        }
+        break;
+        case 1: // Variance
+        {
+
+          result = std::sqrt(varianceColumn(data.col(i), nSamples)); // used sqrt for standard deviation from varianve
+        }
+        break;
+        case 2: // Max
+        {
+
+          result = data.col(i).maxCoeff();
+        }
+        break;
+        case 3: // Max
+        {
+
+          result = data.col(i).minCoeff();
+        }
+        break;
+        default:
+        {
+          break;
+        }
+        }
+
+        std::cout << "|" << std::setw(10) << std::right << result;
+        std::cout << std::setw(4) << std::left << " ";
+      }
+      std::cout << std::endl;
+    }
+  };
 
   MatrixXd cleanSparseRecords(const MatrixXd &dataSet, int amountN, int leftCols)
   {

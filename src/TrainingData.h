@@ -20,13 +20,14 @@ namespace ML::DataSet
 
   void trainIrisMLP();
 
+  void trainPima();
+
   void testTrainNClasses();
 
   void trainOr();
 
   void trainXOr();
 
-  void trainPimaSeq();
 
   void trainXOrMLP();
 
@@ -41,11 +42,11 @@ namespace ML::DataSet
   std::tuple<int, int> readDataShapeFromFile(std::string fileName);
 
   double varianceColumn(const MatrixXd &col, int nData);
-  
+
   MatrixXd standardizeColumn(const MatrixXd &col, int nData, NormalizationType normType);
 
-  MatrixXd cleanSparseRecords(const MatrixXd &dataSet, int amountN, int leftCols);
-
   void summaryBody(const MatrixXd &data, const ArrayX<std::string> &headers, int nHiddenSet, int nSamples, int nPrecision);
+
+  MatrixXd cleanSparseRecords(const MatrixXd &dataSet, int amountN, int leftCols);
 
 }
